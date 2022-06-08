@@ -1,0 +1,59 @@
+---
+title: "Application of GSFA on Processed LUHMES CROP-seq Data"
+subtitle: "-- In-house scripts"
+author: "Yifan Zhou (zhouyf@uchicago.edu)"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+requireNamespace("pander", quietly = TRUE)
+# set default chunk output
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      comment = NA,
+                      tidy = FALSE,
+                      fig.width = 7,
+                      fig.height = 5,
+                      fig.align = "center",
+                      results = "asis")
+
+# formatting of pander tables
+pander::panderOptions('knitr.auto.asis', FALSE)
+pander::panderOptions("table.split.table", Inf)
+```
+
+This tutorial describes how to run GSFA on LUHMES CROP-seq data after [preprocessing](preprocess_LUHMES.html).
+
+## Analysis scripts
+
+* R script: `/project2/xinhe/yifan/Factor_analysis/LUHMES/run_gsfa_negctrl.R`  
+* sbatch script: `/project2/xinhe/yifan/Factor_analysis/LUHMES/gsfa_negctrl_job.sbatch`
+
+## Necessary packages
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(GSFA)
+```
+
+## GSFA inputs
+
+Processed gene expression matrix: `/project2/xinhe/yifan/Factor_analysis/LUHMES/processed_data/deviance_residual.merged_top_6k.corrected_4.scaled.rds`
+
+Binarized perturbation matrix: `/project2/xinhe/yifan/Factor_analysis/LUHMES/processed_data/merged_metadata.rds`
+
+## GSFA settings
+
+In `fit_gsfa_multivar()`, we specify 20 factors initialized from truncated SVD and run Gibbs sampling for 3000 iterations, with the posterior mean estimates computed over the last 1000 iterations of samples.
+
+We further calibrate the differential effects of gRNA targets by subtracting the raw coefficients (beta's) of gRNAs by the beta of the negative control group ("Nontargeting"). This is done by setting the options `use_neg_control = T` and `neg_control_index = negctrl_index` in `fit_gsfa_multivar()`.
+
+## Computational requirements
+
+This process is both time and memory intensive. We recommend submitting the R script as an sbatch job to a high performance computing cluster that can guarantee 50GB memory and 3.5 hours of runtime without interruption.

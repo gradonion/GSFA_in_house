@@ -1,0 +1,94 @@
+---
+title: "Application of GSFA on Processed CD8+ T Cell CROP-seq Data"
+subtitle: "-- In-house scripts"
+author: "Yifan Zhou (zhouyf@uchicago.edu)"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+requireNamespace("pander", quietly = TRUE)
+# set default chunk output
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      comment = NA,
+                      tidy = FALSE,
+                      fig.width = 7,
+                      fig.height = 5,
+                      fig.align = "center",
+                      results = "asis")
+
+# formatting of pander tables
+pander::panderOptions('knitr.auto.asis', FALSE)
+pander::panderOptions("table.split.table", Inf)
+```
+
+This tutorial describes how to run GSFA on CD8+ T cell CROP-seq data after [preprocessing](preprocess_TCells.html).
+
+## Analysis scripts
+
+* R script: `/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/run_gsfa_2groups_negctrl.R`  
+* sbatch script: `/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/gsfa_2groups_negctrl_job.sbatch`
+
+## Necessary packages
+
+```{r}
+library(data.table)
+library(tidyverse)
+library(GSFA)
+```
+
+## GSFA inputs
+
+Processed gene expression matrix: `/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/processed_data/deviance_residual.all_T_cells_merged_top_6k.batch_uncorrected.rds`
+
+Binarized perturbation matrix: `/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/processed_data/metadata.all_T_cells_merged.rds`
+
+## GSFA settings
+
+We use the modified GSFA model with two cell groups (implemented in `fit_gsfa_multivar_2groups()`), stratifying all cells by their stimulation states (unstimulated:0, stimulated:1). We specify 20 factors initialized from truncated SVD and run Gibbs sampling for 4000 iterations, with the posterior mean estimates computed over the last 1000 iterations of samples.
+
+We further calibrate the differential effects of gRNA targets by subtracting the raw coefficients (beta's) of gRNAs by the beta of the negative control group ("Nontargeting"). This is done by setting the options `use_neg_control = T` and `neg_control_index = negctrl_index` in `fit_gsfa_multivar_2groups()`.
+
+## Computational requirements
+
+This process is both time and memory intensive. For convenience of memory usage and data storage, we broke the 4k iterations down into two consecutive segments of 2k iterations. We recommend submitting the R script as an sbatch job to a high performance computing cluster that can guarantee 50GB memory and 5.5 hours of runtime without interruption for each segment.
+
+Example of running the first 2k iterations in bash:
+
+```
+module load R/4.0.4
+Rscript run_gsfa_2groups_negctrl.R \
+  --out_folder=gsfa_output_detect_01/all_uncorrected_by_group.use_negctrl/ \
+  --init_method=svd \
+  --out_suffix=svd_negctrl \
+  --permute=FALSE \
+  --K=20 \
+  --niter=2000 \
+  --average_niter=1000 \
+  --random_seed=92629 \
+  --store_all_samples=TRUE \
+  --restart=FALSE
+```
+
+Example of running the second 2k iterations in bash:
+
+```
+module load R/4.0.4
+Rscript run_gsfa_2groups_negctrl.R \
+  --out_folder=gsfa_output_detect_01/all_uncorrected_by_group.use_negctrl/ \
+  --init_method=svd \
+  --out_suffix=svd_negctrl.restart \
+  --permute=FALSE \
+  --K=20 \
+  --niter=2000 \
+  --average_niter=1000 \
+  --random_seed=92629 \
+  --store_all_samples=TRUE \
+  --restart=TRUE \
+  --previous_res=gsfa_output_detect_01/all_uncorrected_by_group.use_negctrl/All.gibbs_obj_k20.svd_negctrl.rds
+```
