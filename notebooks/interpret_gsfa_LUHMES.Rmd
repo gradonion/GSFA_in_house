@@ -345,6 +345,8 @@ dge_comparison_df <- data.frame(Perturbation = guides,
 
 Number of DEGs detected under each perturbation using 4 different methods (Figure 5E):
 
+Compared with other differential expression analysis methods, GSFA detected the most DEGs for all 7 gene targets that have significant effects.
+
 ```{r Fig_5E, fig.width=13, fig.height=5}
 dge_plot_df <- reshape2::melt(dge_comparison_df, id.var = "Perturbation",
                               variable.name = "Method", value.name = "Num_DEGs")
@@ -363,8 +365,6 @@ ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
         legend.position = "bottom",
         legend.text = element_text(size = 13))
 ```
-
-Compared with other differential expression analysis methods, GSFA detected the most DEGs for 5 out of 7 gene targets that have significant effects.
 
 ## Perturbation effects on marker genes
 

@@ -356,7 +356,7 @@ dge_comparison_df <- data.frame(Perturbation = guides,
 ```
 
 Number of DEGs detected under each perturbation using 4 different methods (Figure 4A):  
-Compared with other differential expression analysis methods, GSFA detected the most DEGs for all 9 gene targets that have significant effects.
+Compared with other differential expression analysis methods, GSFA detected the most DEGs for 15 gene targets.
 
 ```{r Fig_4A, fig.width=13, fig.height=5.5}
 dge_plot_df <- reshape2::melt(dge_comparison_df, id.var = "Perturbation",
@@ -379,7 +379,7 @@ ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
 
 ## Perturbation effects on marker genes
 
-To better understand the functions of these 7 target genes, we examined their effects on marker genes for T cell activation or proliferation states.
+To better understand the functions of these 9 target genes, we examined their effects on marker genes for T cell activation or proliferation states.
 
 ### GSFA
 
