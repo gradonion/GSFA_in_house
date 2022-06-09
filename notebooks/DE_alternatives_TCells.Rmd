@@ -1,5 +1,5 @@
 ---
-title: "Alternative DE methods on LUHMES CROP-seq Data"
+title: "Alternative DE methods on CD8+ T Cell CROP-seq Data"
 subtitle: "-- In-house scripts"
 author: "Yifan Zhou (zhouyf@uchicago.edu)"
 output:
@@ -27,18 +27,18 @@ pander::panderOptions('knitr.auto.asis', FALSE)
 pander::panderOptions("table.split.table", Inf)
 ```
 
-This tutorial describes how to run alternative differential expression (DE) methods on LUHMES CROP-seq data. All file paths here are relative to this working directory: `/project2/xinhe/yifan/Factor_analysis/LUHMES/`.
+This tutorial describes how to run alternative differential expression (DE) methods on CD8+ T Cell CROP-seq data. **All analyses are limited to the stimulated group only.** All file paths here are relative to this working directory: `/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/`.
 
 ## DESeq2
 
 ### R script
 
-Location: `run_deseq.R`;
+Location: `run_deseq.all_by_stim.R`;
 
 Command line usage example:
 
 ```
-Rscript run_deseq.R --out_folder=processed_data/DESeq2/dev_top6k_negctrl/ --marker=ADNP --NTC_only=TRUE --permute=FALSE
+Rscript run_deseq.all_by_stim.R --out_folder=processed_data/DESeq2/all_by_stim_negctrl/ --marker=ARID1A --NTC_only=TRUE --permute=FALSE
 ```
 
 `marker`: the gRNA perturbation condition to test the differential effects,  
@@ -55,18 +55,18 @@ To submit jobs, run the edited script: `./submit_DE_jobs_in_batches.py`.
 
 ### Output
 
-Each gRNA condition vs negative control: `processed_data/DESeq2/dev_top6k_negctrl/`;
+Each gRNA condition vs negative control: `processed_data/DESeq2/all_by_stim_negctrl/`;
 
-Each gRNA condition vs the rest of cells: `processed_data/DESeq2/dev_top6k/`;
+Each gRNA condition vs the rest of cells: `processed_data/DESeq2/all_by_stim_dev_6k/`;
 
 ## MAST
 
-Location: `run_MASTcpmDetRate.R`;
+Location: `run_MASTcpmDetRate.all_by_stim.R`;
 
 Command line usage example:
 
 ```
-Rscript run_MASTcpmDetRate.R --out_folder=processed_data/MAST/dev_top6k_negctrl/ --marker=ADNP --NTC_only=TRUE --permute=FALSE
+Rscript run_MASTcpmDetRate.all_by_stim.R --out_folder=processed_data/MAST/all_by_stim_negctrl/ --marker=ARID1A --NTC_only=TRUE --permute=FALSE
 ```
 
 `marker`: the gRNA perturbation condition to test the differential effects,  
@@ -83,9 +83,9 @@ To submit jobs, run the edited script: `./submit_DE_jobs_in_batches.py`.
 
 ### Output
 
-Each gRNA condition vs negative control: `processed_data/MAST/dev_top6k_negctrl/`;
+Each gRNA condition vs negative control: `processed_data/MAST/all_by_stim_negctrl/`;
 
-Each gRNA condition vs the rest of cells: `processed_data/MAST/dev_top6k/`;
+Each gRNA condition vs the rest of cells: `processed_data/MAST/all_by_stim_dev_6k/`;
 
 ## scMAGeCK
 
@@ -101,4 +101,6 @@ Rscript scmageck/run_scmageck.R --permute=FALSE
 
 ### Output
 
-Each gRNA condition vs negative control: `scmageck/scmageck_lr.LUHMES.dev_res_top_6k.rds`.
+Each gRNA condition vs negative control among stimulated cells: `scmageck/scmageck_lr.TCells_stim.dev_res_top_6k.rds`.
+
+Each gRNA condition vs negative control among unstimulated cells:`scmageck_lr.TCells_unstim.dev_res_top_6k.rds`.

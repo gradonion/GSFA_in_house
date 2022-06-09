@@ -12,7 +12,7 @@
 <meta name="author" content="Yifan Zhou (zhouyf@uchicago.edu)" />
 
 
-<title>Guided Sparse Factor Analysis Project</title>
+<title>Alternative DE methods on LUHMES CROP-seq Data</title>
 
 <script src="site_libs/jquery-3.5.1/jquery-3.5.1.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -332,43 +332,67 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Guided Sparse Factor Analysis Project</h1>
+<h1 class="title toc-ignore">Alternative DE methods on LUHMES CROP-seq Data</h1>
 <h3 class="subtitle">-- In-house scripts</h3>
 <h4 class="author">Yifan Zhou (<a href="mailto:zhouyf@uchicago.edu">zhouyf@uchicago.edu</a>)</h4>
 
 </div>
 
 
-<div id="simulation-study" class="section level2">
-<h2>Simulation study</h2>
-<ul>
-<li>Normal scenarios<br />
-</li>
-<li>Count-based scenarios</li>
-</ul>
+<p>This tutorial describes how to run alternative differential expression (DE) methods on LUHMES CROP-seq data. All file paths here are relative to this working directory: <code>/project2/xinhe/yifan/Factor_analysis/LUHMES/</code>.</p>
+<div id="deseq2" class="section level2">
+<h2><span class="header-section-number">0.1</span> DESeq2</h2>
+<div id="r-script" class="section level3">
+<h3><span class="header-section-number">0.1.1</span> R script</h3>
+<p>Location: <code>run_deseq.R</code>;</p>
+<p>Command line usage example:</p>
+<pre><code>Rscript run_deseq.R --out_folder=processed_data/DESeq2/dev_top6k_negctrl/ --marker=ADNP --NTC_only=TRUE --permute=FALSE</code></pre>
+<p><code>marker</code>: the gRNA perturbation condition to test the differential effects,<br />
+<code>NTC_only</code>: whether to compare with only nontargeting control cells or all cells in other conditions.</p>
 </div>
-<div id="luhmes-neural-progenitor-crop-seq-study" class="section level2">
-<h2>LUHMES neural progenitor CROP-seq study</h2>
-<ul>
-<li><a href="preprocess_LUHMES.html">Preprocessing of LUHMES CROP-seq data</a>;<br />
-</li>
-<li><a href="run_gsfa_LUHMES.html">GSFA application on processed CROP-seq data</a>;<br />
-</li>
-<li><a href="interpret_gsfa_LUHMES.html">GSFA result interpretation</a>;<br />
-</li>
-<li><a href="DE_alternatives_LUHMES.html">Alternative differential expression methods</a>;</li>
-</ul>
+<div id="run-jobs-at-scale" class="section level3">
+<h3><span class="header-section-number">0.1.2</span> Run jobs at scale</h3>
+<p>Edit the Python script <code>submit_DE_jobs_in_batches.py</code>, which can submit sbatch jobs for all gRNA targets.</p>
+<p>Make sure to modify the sbatch script defined in <code>make_DEG_sbatch()</code> and loop over all conditions.</p>
+<p>To submit jobs, run the edited script: <code>./submit_DE_jobs_in_batches.py</code>.</p>
 </div>
-<div id="primary-human-cd8-t-cell-crop-seq-study" class="section level2">
-<h2>Primary human CD8+ T cell CROP-seq study</h2>
-<ul>
-<li><a href="preprocess_TCells.html">Preprocessing of T cell CROP-seq data</a>;<br />
-</li>
-<li><a href="run_gsfa_TCells.html">GSFA application on processed CROP-seq data</a>;<br />
-</li>
-<li><a href="interpret_gsfa_TCells.html">GSFA result interpretation</a>;</li>
-<li><a href="DE_alternatives_TCells.html">Alternative differential expression methods</a>;</li>
-</ul>
+<div id="output" class="section level3">
+<h3><span class="header-section-number">0.1.3</span> Output</h3>
+<p>Each gRNA condition vs negative control: <code>processed_data/DESeq2/dev_top6k_negctrl/</code>;</p>
+<p>Each gRNA condition vs the rest of cells: <code>processed_data/DESeq2/dev_top6k/</code>;</p>
+</div>
+</div>
+<div id="mast" class="section level2">
+<h2><span class="header-section-number">0.2</span> MAST</h2>
+<p>Location: <code>run_MASTcpmDetRate.R</code>;</p>
+<p>Command line usage example:</p>
+<pre><code>Rscript run_MASTcpmDetRate.R --out_folder=processed_data/MAST/dev_top6k_negctrl/ --marker=ADNP --NTC_only=TRUE --permute=FALSE</code></pre>
+<p><code>marker</code>: the gRNA perturbation condition to test the differential effects,<br />
+<code>NTC_only</code>: whether to compare with only nontargeting control cells or all cells in other conditions.</p>
+<div id="run-jobs-at-scale-1" class="section level3">
+<h3><span class="header-section-number">0.2.1</span> Run jobs at scale</h3>
+<p>Edit the Python script <code>submit_DE_jobs_in_batches.py</code>, which can submit sbatch jobs for all gRNA targets.</p>
+<p>Make sure to modify the sbatch script defined in <code>make_DEG_sbatch()</code> and loop over all conditions.</p>
+<p>To submit jobs, run the edited script: <code>./submit_DE_jobs_in_batches.py</code>.</p>
+</div>
+<div id="output-1" class="section level3">
+<h3><span class="header-section-number">0.2.2</span> Output</h3>
+<p>Each gRNA condition vs negative control: <code>processed_data/MAST/dev_top6k_negctrl/</code>;</p>
+<p>Each gRNA condition vs the rest of cells: <code>processed_data/MAST/dev_top6k/</code>;</p>
+</div>
+</div>
+<div id="scmageck" class="section level2">
+<h2><span class="header-section-number">0.3</span> scMAGeCK</h2>
+<div id="r-script-1" class="section level3">
+<h3><span class="header-section-number">0.3.1</span> R script</h3>
+<p>Location: <code>scmageck/run_scmageck.R</code>;</p>
+<p>Command line usage example (works on all gRNA conditions at once):</p>
+<pre><code>Rscript scmageck/run_scmageck.R --permute=FALSE</code></pre>
+</div>
+<div id="output-2" class="section level3">
+<h3><span class="header-section-number">0.3.2</span> Output</h3>
+<p>Each gRNA condition vs negative control: <code>scmageck/scmageck_lr.LUHMES.dev_res_top_6k.rds</code>.</p>
+</div>
 </div>
 
 

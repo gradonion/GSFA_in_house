@@ -19,9 +19,11 @@ output:
 * [Preprocessing of LUHMES CROP-seq data](preprocess_LUHMES.html);  
 * [GSFA application on processed CROP-seq data](run_gsfa_LUHMES.html);  
 * [GSFA result interpretation](interpret_gsfa_LUHMES.html);  
+* [Alternative differential expression methods](DE_alternatives_LUHMES.html);
 
 ## Primary human CD8+ T cell CROP-seq study
 
 * [Preprocessing of T cell CROP-seq data](preprocess_TCells.html);  
 * [GSFA application on processed CROP-seq data](run_gsfa_TCells.html);  
 * [GSFA result interpretation](interpret_gsfa_TCells.html);
+* [Alternative differential expression methods](DE_alternatives_TCells.html);
