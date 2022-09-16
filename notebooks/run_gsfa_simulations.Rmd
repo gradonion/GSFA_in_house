@@ -1,0 +1,49 @@
+---
+title: "Simulation Studies of GSFA"
+subtitle: "-- In-house scripts"
+author: "Yifan Zhou (zhouyf@uchicago.edu)"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+requireNamespace("pander", quietly = TRUE)
+# set default chunk output
+knitr::opts_chunk$set(echo = TRUE,
+                      message = FALSE,
+                      warning = FALSE,
+                      comment = NA,
+                      tidy = FALSE,
+                      fig.width = 7,
+                      fig.height = 5,
+                      fig.align = "center",
+                      results = "asis")
+
+# formatting of pander tables
+pander::panderOptions('knitr.auto.asis', FALSE)
+pander::panderOptions("table.split.table", Inf)
+```
+
+This tutorial describes how to generate simulated data and run GSFA on them.
+
+## Normal scenarios (no neg ctrl)
+
+* R script: `/project2/xinhe/yifan/Factor_analysis/simulations/run_single_dataset_normal_mixture`  
+* sbatch script: make_sbatch_normal() function in 
+`/project2/xinhe/yifan/Factor_analysis/simulations/submit_jobs_in_batch.normal_mixture.py`
+
+
+## Count scenarios (no neg ctrl)
+
+* R script: `/project2/xinhe/yifan/Factor_analysis/simulations/run_single_count_normal_mixture.R`  
+* sbatch script: make_sbatch_count() function in 
+`/project2/xinhe/yifan/Factor_analysis/simulations/submit_jobs_in_batch.normal_mixture.py`
+
+## Scenarios with neg ctrl cells
+
+* R script: `/project2/xinhe/yifan/Factor_analysis/simulations/run_single_dataset_negctrl.R`  
+* sbatch script: make_sbatch_normal_neg() function in 
+`/project2/xinhe/yifan/Factor_analysis/simulations/submit_jobs_in_batch.normal_mixture.py`

@@ -11,8 +11,9 @@ output:
 
 ## Simulation study
 
-* Normal scenarios  
-* Count-based scenarios
+* [Simulation and GSFA run](run_gsfa_simulations.html);  
+* Normal scenario results  
+* Count-based scenario results
 
 ## LUHMES neural progenitor CROP-seq study
 
