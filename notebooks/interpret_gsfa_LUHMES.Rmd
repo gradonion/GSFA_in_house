@@ -322,7 +322,7 @@ scmageck_signif_counts <- scmageck_signif_counts[names(scmageck_signif_counts) !
 ```
 
 ```{r}
-sceptre_res <- readRDS("/project2/xinhe/kevinluo/GSFA/sceptre_analysis/LUHMES_cropseq_data/sceptre_output/sceptre.result.rds")
+sceptre_res <- readRDS("/project2/xinhe/kevinluo/GSFA/sceptre_analysis/LUHMES_data_updated/sceptre_output/sceptre.result.rds")
 sceptre_count_df <- data.frame(matrix(nrow = length(guides), ncol = 2))
 colnames(sceptre_count_df) <- c("target", "num_DEG")
 for (i in 1:length(guides)){
@@ -424,9 +424,9 @@ for (m in targets){
 }
 ```
 
-Here are DESeq2 estimated effects of perturbations on marker genes (Figure S5C):
+Here are DESeq2 estimated effects of perturbations on marker genes (Figure S6C):
 
-```{r Fig_S5C, fig.width=6.5, fig.height=5}
+```{r Fig_S6C, fig.width=6.5, fig.height=5}
 complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = "FDR",
@@ -448,9 +448,9 @@ for (m in targets){
 }
 ```
 
-MAST estimated effects of perturbations on marker genes (Figure S5D):
+MAST estimated effects of perturbations on marker genes (Figure S6D):
 
-```{r Fig_S5D, fig.width=6.5, fig.height=5}
+```{r Fig_S6D, fig.width=6.5, fig.height=5}
 complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = "FDR",
@@ -458,6 +458,36 @@ complexplot_gene_perturbation(genes_df, interest_df,
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c("blue3", "grey90", "red3"))
 ```
+
+### SCEPTRE
+
+```{r}
+FC_mat <- matrix(nrow = nrow(interest_df), ncol = length(targets))
+rownames(FC_mat) <- interest_df$gene_name
+colnames(FC_mat) <- targets
+fdr_mat <- FC_mat
+for (m in targets){
+  sceptre_tmp_res <- sceptre_res %>% filter(gRNA_id == m)
+  tmp_pval <- sceptre_tmp_res %>% pull(p_value)
+  sceptre_tmp_res$FDR <- p.adjust(tmp_pval, method = "fdr")
+  FC_mat[, m] <- sceptre_tmp_res$log_fold_change[match(interest_df$gene_ID, 
+                                                       sceptre_tmp_res$gene_id)]
+  fdr_mat[, m] <- sceptre_tmp_res$FDR[match(interest_df$gene_ID, 
+                                            sceptre_tmp_res$gene_id)]
+}
+```
+
+SCEPTRE estimated effects of perturbations on marker genes (Figure S6E):
+
+```{r Fig_S6E, fig.width=6.5, fig.height=5}
+complexplot_gene_perturbation(genes_df, interest_df,
+                              targets = targets,
+                              lfsr_mat = fdr_mat, lfsr_name = "FDR",
+                              effect_mat = FC_mat, effect_name = "SCEPTRE logFC",
+                              score_break = c(-0.4, 0, 0.4),
+                              color_break = c("blue3", "grey90", "red3"))
+```
+
 
 ## GO enrichment in DEGs
 
@@ -558,13 +588,16 @@ terms_of_interest_df <- left_join(terms_of_interest_df, signif_term_df,
                                   by = "description")
 ```
 
-Here are selected GO "biological process" terms and their folds of enrichment in DEGs detected by GSFA (Figure S5E):  
+Here are selected GO "biological process" terms and their folds of enrichment in DEGs detected by GSFA (Figure S6F):  
 (In the code below, we omitted the content in `terms_of_interest_df` as one can subset the `enrich_table` with any terms of their choice.)
 
-```{r Fig_S5E, fig.height=5.5, fig.width=8}
+```{r Fig_S6F, fig.height=5.5, fig.width=8}
 interest_enrich_table <- enrich_table[terms_of_interest_df$description,
                                       colnames(enrich_table) != "DYRK1A"]
 interest_enrich_table[is.na(interest_enrich_table)] <- 0
+# Convert only the first letter of each GO term to upper case.
+rownames(interest_enrich_table) <-
+  str_replace(rownames(interest_enrich_table),  "^\\w{1}", toupper)
 
 map <- Heatmap(abs(interest_enrich_table),
                name = "Fold of enrichment",

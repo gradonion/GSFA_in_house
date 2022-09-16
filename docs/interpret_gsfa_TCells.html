@@ -773,7 +773,16 @@ barplot_top_enrich_terms(enrich_res_by_factor[[factor_indx]],
 number="3.4">
 <h2><span class="header-section-number">3.4</span> Visualization of
 factors on UMAP</h2>
-<pre class="r"><code>seurat_obj &lt;- readRDS(paste0(data_folder,
+<pre class="r"><code># seurat_obj &lt;- NormalizeData(seurat_obj,
+#                             normalization.method = &quot;LogNormalize&quot;,
+#                             scale.factor = 1e4)
+# seurat_obj &lt;- FindVariableFeatures(seurat_obj, nfeatures = 1000)
+# seurat_obj &lt;- ScaleData(seurat_obj,
+#                         vars.to.regress = c(&quot;nCount_RNA&quot;, &quot;percent_mt&quot;))
+# seurat_obj &lt;- RunPCA(seurat_obj, verbose = F)
+# seurat_obj &lt;- FindNeighbors(seurat_obj, reduction = &quot;pca&quot;)
+# seurat_obj &lt;- RunUMAP(seurat_obj, reduction = &quot;pca&quot;, dims = 1:30)
+seurat_obj &lt;- readRDS(paste0(data_folder,
                              &quot;processed_data/seurat_obj.all_T_cells_merged.uncorrected.rds&quot;))
 # Add GSFA factor loadings to the seurat obj.
 stopifnot(rownames(gibbs_PM$Z_pm) == Cells(seurat_obj))
@@ -1028,7 +1037,7 @@ mast_signif_counts &lt;- sapply(mast_list, function(x){filter(x, FDR &lt; fdr_cu
 colnames(scmageck_res$fdr)[colnames(scmageck_res$fdr) == &quot;NegCtrl&quot;] &lt;- &quot;NonTarget&quot;
 scmageck_signif_counts &lt;- colSums(scmageck_res$fdr[, KO_names] &lt; fdr_cutoff)
 scmageck_signif_counts &lt;- scmageck_signif_counts[names(scmageck_signif_counts) != &quot;NonTarget&quot;]</code></pre>
-<pre class="r"><code>sceptre_res &lt;- readRDS(&quot;/project2/xinhe/kevinluo/GSFA/sceptre_analysis/TCells_cropseq_data/simulated_data/sceptre_output/sceptre.result.rds&quot;)
+<pre class="r"><code>sceptre_res &lt;- readRDS(&quot;/project2/xinhe/kevinluo/GSFA/sceptre_analysis/TCells_data_updated/simulated_data/sceptre_output/sceptre.result.rds&quot;)
 sceptre_count_df &lt;- data.frame(matrix(nrow = length(guides), ncol = 2))
 colnames(sceptre_count_df) &lt;- c(&quot;target&quot;, &quot;num_DEG&quot;)
 for (i in 1:length(guides)){
@@ -1059,7 +1068,7 @@ ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
             position = position_dodge(width = 0.9), vjust = -0.25) +
   scale_y_log10() +
   scale_fill_brewer(palette = &quot;Set2&quot;) +
-  labs(x = &quot;Target genes&quot;,
+  labs(x = &quot;Target gene&quot;,
        y = &quot;Number of DEGs&quot;,
        title = &quot;Number of DEGs detected by different methods&quot;) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
@@ -1089,7 +1098,7 @@ Cell cycle:<br />
 As we can see, knockout of SOCS1 or CDKN1B has positive effects on cell
 proliferation markers, indicating increased cell proliferation.</p>
 <p>T cell activation and immune response:<br />
-Knockout of CD5, CBLB, RASA2 or TCEB2 has mostly positve effects on
+Knockout of CD5, CBLB, RASA2 or TCEB2 has mostly positive effects on
 effector markers, indicating T cell activation; knockout of ARID1A has
 the opposite pattern.</p>
 <p>This next plot expanded the gRNA targets to all that have DEGs
@@ -1159,6 +1168,31 @@ S4E):</p>
                               color_break = c(&quot;blue3&quot;, &quot;grey90&quot;, &quot;red3&quot;))</code></pre>
 <p><img src="interpret_gsfa_TCells_files/figure-html/Fig_S4E-1.png" width="528" style="display: block; margin: auto;" /></p>
 </div>
+<div id="sceptre" class="section level3" number="4.2.5">
+<h3><span class="header-section-number">4.2.5</span> SCEPTRE</h3>
+<pre class="r"><code>FC_mat &lt;- matrix(nrow = nrow(interest_df), ncol = length(targets))
+rownames(FC_mat) &lt;- interest_df$gene_name
+colnames(FC_mat) &lt;- targets
+fdr_mat &lt;- FC_mat
+for (m in targets){
+  sceptre_tmp_res &lt;- sceptre_res %&gt;% filter(gRNA_id == m)
+  tmp_pval &lt;- sceptre_tmp_res %&gt;% pull(p_value)
+  sceptre_tmp_res$FDR &lt;- p.adjust(tmp_pval, method = &quot;fdr&quot;)
+  FC_mat[, m] &lt;- sceptre_tmp_res$log_fold_change[match(interest_df$gene_ID, 
+                                                       sceptre_tmp_res$gene_id)]
+  fdr_mat[, m] &lt;- sceptre_tmp_res$FDR[match(interest_df$gene_ID, 
+                                            sceptre_tmp_res$gene_id)]
+}</code></pre>
+<p>SCEPTRE estimated effects of perturbations on marker genes (Figure
+S4F):</p>
+<pre class="r"><code>complexplot_gene_perturbation(genes_df, interest_df,
+                              targets = targets,
+                              lfsr_mat = fdr_mat, lfsr_name = &quot;FDR&quot;,
+                              effect_mat = FC_mat, effect_name = &quot;SCEPTRE logFC&quot;,
+                              score_break = c(-0.4, 0, 0.4),
+                              color_break = c(&quot;blue3&quot;, &quot;grey90&quot;, &quot;red3&quot;))</code></pre>
+<p><img src="interpret_gsfa_TCells_files/figure-html/Fig_S6E-1.png" width="528" style="display: block; margin: auto;" /></p>
+</div>
 </div>
 <div id="go-enrichment-in-degs" class="section level2" number="4.3">
 <h2><span class="header-section-number">4.3</span> GO enrichment in
@@ -1221,7 +1255,9 @@ enrichment in DEGs detected by GSFA (Figure 4C).<br />
 <code>enrich_table</code> with any terms of their choice.)</p>
 <pre class="r"><code>interest_enrich_table &lt;- enrich_table[terms_of_interest_df$description, ]
 interest_enrich_table[is.na(interest_enrich_table)] &lt;- 0
-
+# Convert only the first letter of each GO term to upper case.
+rownames(interest_enrich_table) &lt;-
+  str_replace(rownames(interest_enrich_table),  &quot;^\\w{1}&quot;, toupper)
 map &lt;- Heatmap(interest_enrich_table[, c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;,
                                          &quot;DGKA&quot;, &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)],
                name = &quot;Fold of enrichment&quot;,
@@ -1251,7 +1287,7 @@ map &lt;- Heatmap(interest_enrich_table,
                column_names_rot = 45,
                width = unit(10, &quot;cm&quot;))
 draw(map, heatmap_legend_side = &quot;right&quot;)</code></pre>
-<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-24-1.png" width="1152" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-25-1.png" width="1152" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="session-information" class="section level1" number="5">

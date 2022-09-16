@@ -547,9 +547,14 @@ barplot_top_enrich_terms <- function(enrich_df, fdr_cutoff = 0.05, FC_cutoff = 2
   } else {
     top_terms_df <- enrich_df %>% filter(description %in% terms_of_interest)
   }
-  top_terms_df$description_short <- str_wrap(top_terms_df$description, width = str_wrap_length)
-  top_terms_df$description_short <- factor(top_terms_df$description_short, 
-                                     levels = top_terms_df$description_short)
+  top_terms_df <- top_terms_df %>%
+    # Convert only the first letter to upper case.
+    mutate(description = str_replace(description,  "^\\w{1}", toupper)) %>%
+    # Break the text into multiple lines if passed a given length.
+    mutate(description_short = str_wrap(description, width = str_wrap_length))
+  top_terms_df$description_short <-
+    factor(top_terms_df$description_short,
+           levels = top_terms_df$description_short)
   top_terms_df$pValue[top_terms_df$pValue < 10^(-pval_max)] <- 10^(-pval_max)
   top_terms_df$enrichmentRatio[top_terms_df$enrichmentRatio > FC_max] <- FC_max
   plot_out <- ggplot(top_terms_df) +
@@ -560,6 +565,8 @@ barplot_top_enrich_terms <- function(enrich_df, fdr_cutoff = 0.05, FC_cutoff = 2
     scale_fill_gradientn(limits = c(2, pval_max),
                          colors = c("blue", "red"),
                          breaks = seq(2, pval_max, 2)) +
+    labs(y = "Enrichment ratio",
+         fill = expression(-log[10]*"(p-value)")) +
     theme(axis.title.y = element_blank(),
           axis.text.y = element_text(size = 13))
   return(plot_out)

@@ -274,6 +274,15 @@ barplot_top_enrich_terms(enrich_res_by_factor[[factor_indx]],
 ## Visualization of factors on UMAP
 
 ```{r load_and_annotate_seurat_obj}
+# seurat_obj <- NormalizeData(seurat_obj,
+#                             normalization.method = "LogNormalize",
+#                             scale.factor = 1e4)
+# seurat_obj <- FindVariableFeatures(seurat_obj, nfeatures = 1000)
+# seurat_obj <- ScaleData(seurat_obj,
+#                         vars.to.regress = c("nCount_RNA", "percent_mt"))
+# seurat_obj <- RunPCA(seurat_obj, verbose = F)
+# seurat_obj <- FindNeighbors(seurat_obj, reduction = "pca")
+# seurat_obj <- RunUMAP(seurat_obj, reduction = "pca", dims = 1:30)
 seurat_obj <- readRDS(paste0(data_folder,
                              "processed_data/seurat_obj.all_T_cells_merged.uncorrected.rds"))
 # Add GSFA factor loadings to the seurat obj.
@@ -401,7 +410,7 @@ scmageck_signif_counts <- scmageck_signif_counts[names(scmageck_signif_counts) !
 ```
 
 ```{r sceptre}
-sceptre_res <- readRDS("/project2/xinhe/kevinluo/GSFA/sceptre_analysis/TCells_cropseq_data/simulated_data/sceptre_output/sceptre.result.rds")
+sceptre_res <- readRDS("/project2/xinhe/kevinluo/GSFA/sceptre_analysis/TCells_data_updated/simulated_data/sceptre_output/sceptre.result.rds")
 sceptre_count_df <- data.frame(matrix(nrow = length(guides), ncol = 2))
 colnames(sceptre_count_df) <- c("target", "num_DEG")
 for (i in 1:length(guides)){
@@ -437,7 +446,7 @@ ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
             position = position_dodge(width = 0.9), vjust = -0.25) +
   scale_y_log10() +
   scale_fill_brewer(palette = "Set2") +
-  labs(x = "Target genes",
+  labs(x = "Target gene",
        y = "Number of DEGs",
        title = "Number of DEGs detected by different methods") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
@@ -465,7 +474,7 @@ Cell cycle:
 As we can see, knockout of SOCS1 or CDKN1B has positive effects on cell proliferation markers, indicating increased cell proliferation.
 
 T cell activation and immune response:  
-Knockout of CD5, CBLB, RASA2 or TCEB2 has mostly positve effects on effector markers, indicating T cell activation; knockout of ARID1A has the opposite pattern.
+Knockout of CD5, CBLB, RASA2 or TCEB2 has mostly positive effects on effector markers, indicating T cell activation; knockout of ARID1A has the opposite pattern.
 
 This next plot expanded the gRNA targets to all that have DEGs detected:
 
@@ -540,6 +549,35 @@ complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = "FDR",
                               effect_mat = FC_mat, effect_name = "MAST logFC",
+                              score_break = c(-0.4, 0, 0.4),
+                              color_break = c("blue3", "grey90", "red3"))
+```
+
+### SCEPTRE
+
+```{r}
+FC_mat <- matrix(nrow = nrow(interest_df), ncol = length(targets))
+rownames(FC_mat) <- interest_df$gene_name
+colnames(FC_mat) <- targets
+fdr_mat <- FC_mat
+for (m in targets){
+  sceptre_tmp_res <- sceptre_res %>% filter(gRNA_id == m)
+  tmp_pval <- sceptre_tmp_res %>% pull(p_value)
+  sceptre_tmp_res$FDR <- p.adjust(tmp_pval, method = "fdr")
+  FC_mat[, m] <- sceptre_tmp_res$log_fold_change[match(interest_df$gene_ID, 
+                                                       sceptre_tmp_res$gene_id)]
+  fdr_mat[, m] <- sceptre_tmp_res$FDR[match(interest_df$gene_ID, 
+                                            sceptre_tmp_res$gene_id)]
+}
+```
+
+SCEPTRE estimated effects of perturbations on marker genes (Figure S4F):
+
+```{r Fig_S6E, fig.width=5.5, fig.height=4.5}
+complexplot_gene_perturbation(genes_df, interest_df,
+                              targets = targets,
+                              lfsr_mat = fdr_mat, lfsr_name = "FDR",
+                              effect_mat = FC_mat, effect_name = "SCEPTRE logFC",
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c("blue3", "grey90", "red3"))
 ```
@@ -669,7 +707,9 @@ Here are selected GO "biological process"" terms and their folds of enrichment i
 ```{r Fig_4C, fig.height=5.5, fig.width=9}
 interest_enrich_table <- enrich_table[terms_of_interest_df$description, ]
 interest_enrich_table[is.na(interest_enrich_table)] <- 0
-
+# Convert only the first letter of each GO term to upper case.
+rownames(interest_enrich_table) <-
+  str_replace(rownames(interest_enrich_table),  "^\\w{1}", toupper)
 map <- Heatmap(interest_enrich_table[, c("ARID1A", "LCP2", "CD5", "CBLB", "RASA2",
                                          "DGKA", "TCEB2", "SOCS1", "CDKN1B")],
                name = "Fold of enrichment",
