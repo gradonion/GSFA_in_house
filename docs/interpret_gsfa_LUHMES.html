@@ -383,29 +383,30 @@ library(kableExtra)
 library(WebGestaltR)
 
 source(&quot;/project2/xinhe/yifan/Factor_analysis/analysis_website_for_Kevin/scripts/plotting_functions.R&quot;)
-data_folder &lt;- &quot;/project2/xinhe/yifan/Factor_analysis/LUHMES/&quot;</code></pre>
+wkdir &lt;- &quot;/project2/xinhe/yifan/Factor_analysis/LUHMES/&quot;
+result_folder &lt;- &quot;gsfa_output_detect_01/use_negctrl/&quot;</code></pre>
 <p>The first thing we need is the output of GSFA
 <code>fit_gsfa_multivar()</code> run. The lighter version containing
 just the posterior mean estimates and LFSR of perturbation-gene effects
 is enough.</p>
-<pre class="r"><code>fit &lt;- readRDS(paste0(data_folder,
-                      &quot;gsfa_output_detect_01/use_negctrl/All.gibbs_obj_k20.svd_negctrl.seed_14314.light.rds&quot;))
+<pre class="r"><code>fit &lt;- readRDS(paste0(wkdir, result_folder,
+                      &quot;All.gibbs_obj_k20.svd_negctrl.seed_14314.light.rds&quot;))
 gibbs_PM &lt;- fit$posterior_means
 lfsr_mat &lt;- fit$lfsr[, -ncol(fit$lfsr)]
 total_effect &lt;- fit$total_effect[, -ncol(fit$total_effect)]
 KO_names &lt;- colnames(lfsr_mat)</code></pre>
 <p>We also need the cell by perturbation matrix which was used as input
 <span class="math inline">\(G\)</span> for GSFA.</p>
-<pre class="r"><code>metadata &lt;- readRDS(paste0(data_folder, &quot;processed_data/merged_metadata.rds&quot;))
+<pre class="r"><code>metadata &lt;- readRDS(paste0(wkdir, &quot;processed_data/merged_metadata.rds&quot;))
 G_mat &lt;- metadata[, 4:18]</code></pre>
 <p>Finally, we load the mapping from gene name to ENSEMBL ID for all 6k
 genes used in GSFA, as well as selected neuronal marker genes. This is
 specific to this study and analysis.</p>
-<pre class="r"><code>feature.names &lt;- data.frame(fread(paste0(data_folder, &quot;GSE142078_raw/GSM4219576_Run2_genes.tsv.gz&quot;),
+<pre class="r"><code>feature.names &lt;- data.frame(fread(paste0(wkdir, &quot;GSE142078_raw/GSM4219576_Run2_genes.tsv.gz&quot;),
                                   header = FALSE), stringsAsFactors = FALSE)
 genes_df &lt;- feature.names[match(rownames(lfsr_mat), feature.names$V1), ]
 names(genes_df) &lt;- c(&quot;ID&quot;, &quot;Name&quot;)
-interest_df &lt;- readRDS(paste0(data_folder, &quot;processed_data/selected_neuronal_markers.rds&quot;))</code></pre>
+interest_df &lt;- readRDS(paste0(wkdir, &quot;processed_data/selected_neuronal_markers.rds&quot;))</code></pre>
 </div>
 </div>
 <div id="factor-perturbation-association" class="section level1"
@@ -928,7 +929,7 @@ Num_genes
 <pre class="r"><code>guides &lt;- KO_names[KO_names!=&quot;Nontargeting&quot;]</code></pre>
 <pre class="r"><code>deseq_list &lt;- list()
 for (m in guides){
-  fname &lt;- paste0(data_folder, &quot;processed_data/DESeq2/dev_top6k_negctrl/gRNA_&quot;, 
+  fname &lt;- paste0(wkdir, &quot;processed_data/DESeq2/dev_top6k_negctrl/gRNA_&quot;, 
                   m, &quot;.dev_res_top6k.vs_negctrl.rds&quot;)
   res &lt;- readRDS(fname)
   res &lt;- as.data.frame(res@listData, row.names = res@rownames)
@@ -939,7 +940,7 @@ for (m in guides){
 deseq_signif_counts &lt;- sapply(deseq_list, function(x){filter(x, FDR &lt; fdr_cutoff) %&gt;% nrow()})</code></pre>
 <pre class="r"><code>mast_list &lt;- list()
 for (m in guides){
-  fname &lt;- paste0(data_folder, &quot;processed_data/MAST/dev_top6k_negctrl/gRNA_&quot;, 
+  fname &lt;- paste0(wkdir, &quot;processed_data/MAST/dev_top6k_negctrl/gRNA_&quot;, 
                   m, &quot;.dev_res_top6k.vs_negctrl.rds&quot;)
   tmp_df &lt;- readRDS(fname)
   tmp_df$geneID &lt;- rownames(tmp_df)
@@ -947,7 +948,7 @@ for (m in guides){
   mast_list[[m]] &lt;- tmp_df
 }
 mast_signif_counts &lt;- sapply(mast_list, function(x){filter(x, FDR &lt; fdr_cutoff) %&gt;% nrow()})</code></pre>
-<pre class="r"><code>scmageck_res &lt;- readRDS(paste0(data_folder, &quot;scmageck/scmageck_lr.LUHMES.dev_res_top_6k.rds&quot;))
+<pre class="r"><code>scmageck_res &lt;- readRDS(paste0(wkdir, &quot;scmageck/scmageck_lr.LUHMES.dev_res_top_6k.rds&quot;))
 colnames(scmageck_res$fdr)[colnames(scmageck_res$fdr) == &quot;NegCtrl&quot;] &lt;- &quot;Nontargeting&quot;
 scmageck_signif_counts &lt;- colSums(scmageck_res$fdr[, KO_names] &lt; fdr_cutoff)
 scmageck_signif_counts &lt;- scmageck_signif_counts[names(scmageck_signif_counts) != &quot;Nontargeting&quot;]</code></pre>
@@ -977,7 +978,8 @@ effects.</p>
 dge_plot_df$Perturbation &lt;- factor(dge_plot_df$Perturbation,
                                    levels = guides)
                                    # levels = c(&quot;NegCtrl&quot;, KO_names[KO_names!=&quot;Nontargeting&quot;]))
-ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
+dge_plt &lt;- ggplot(dge_plot_df,
+                  aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
   geom_bar(position = &quot;dodge&quot;, stat = &quot;identity&quot;) +
   geom_text(aes(label = Num_DEGs), position=position_dodge(width=0.9), vjust=-0.25) +
   scale_y_log10() +
@@ -987,7 +989,8 @@ ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
        title = &quot;Number of DEGs detected by different methods&quot;) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
         legend.position = &quot;bottom&quot;,
-        legend.text = element_text(size = 13))</code></pre>
+        legend.text = element_text(size = 13))
+dge_plt</code></pre>
 <p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_5E-1.png" width="1248" style="display: block; margin: auto;" /></p>
 </div>
 <div id="perturbation-effects-on-marker-genes" class="section level2"
@@ -1180,6 +1183,49 @@ map &lt;- Heatmap(abs(interest_enrich_table),
                width = unit(6, &quot;cm&quot;))
 draw(map, heatmap_legend_side = &quot;bottom&quot;)</code></pre>
 <p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6F-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p>Similar GO enrichment analyses were performed on DEGs detected by
+alternative methods (FDR &lt; 0.05).<br />
+Below summarizes the number of significant GO terms in DEGs by each
+method:</p>
+<pre class="r"><code>enrich_thres &lt;- 0.05
+enrich_dir &lt;- paste0(wkdir, result_folder, &quot;WebGestalt_ORA/&quot;)
+enrich_res &lt;- readRDS(paste0(enrich_dir,
+                             &quot;GO_enrich_in_GSFA_DEGs.rds&quot;))
+gsfa_term_count &lt;-
+  sapply(enrich_res, function(x){ x %&gt;% dplyr::filter(FDR &lt; enrich_thres) %&gt;% nrow()})
+# Skip low count target genes to simplify plot.
+gsfa_term_count &lt;- gsfa_term_count[gsfa_term_count &gt; 10]
+
+term_count_df &lt;- data.frame(Perturbation = names(gsfa_term_count),
+                            GSFA = as.numeric(gsfa_term_count))
+for (method in c(&quot;scmageck&quot;, &quot;DESeq2&quot;, &quot;MAST&quot;, &quot;sceptre&quot;)) {
+  enrich_res &lt;- readRDS(paste0(enrich_dir,
+                               method, &quot;_DEGs_fdr_0.05.go_bp_thres_1.rds&quot;))
+  term_count &lt;-
+    sapply(enrich_res, function(x){ x %&gt;% dplyr::filter(FDR &lt; enrich_thres) %&gt;% nrow()})
+  term_count_df[[method]] &lt;- term_count[term_count_df$Perturbation]
+}
+names(term_count_df)[c(3, 6)] &lt;- c(&quot;scMAGeCK&quot;, &quot;SCEPTRE&quot;)
+term_plot_df &lt;- term_count_df %&gt;%
+  tidyr::pivot_longer(cols = !Perturbation,
+                      names_to = &quot;Method&quot;, values_to = &quot;Num_GO_terms&quot;) %&gt;%
+  dplyr::mutate(Method = factor(Method, levels = names(term_count_df)[-1]))
+term_plot_df$Num_GO_terms &lt;-
+  tidyr::replace_na(term_plot_df$Num_GO_terms, 0)
+
+num_terms_plt &lt;-
+  ggplot(term_plot_df, aes(x = Perturbation, y = Num_GO_terms, fill = Method)) +
+  geom_bar(position = &quot;dodge&quot;, stat = &quot;identity&quot;) +
+  geom_text(aes(label = Num_GO_terms),
+            position = position_dodge(width = 0.9), vjust = -0.25) +
+  scale_fill_brewer(palette = &quot;Set2&quot;) +
+  labs(x = &quot;Target gene&quot;,
+       y = &quot;Number of enriched GO terms&quot;,
+       title = &quot;Number of GO terms enriched in DEGs detected by different methods&quot;) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        legend.text = element_text(size = 13))
+num_terms_plt</code></pre>
+<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_5F-1.png" width="720" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="session-information" class="section level1" number="5">

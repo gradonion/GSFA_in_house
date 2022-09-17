@@ -58,14 +58,15 @@ library(kableExtra)
 library(WebGestaltR)
 
 source("/project2/xinhe/yifan/Factor_analysis/analysis_website_for_Kevin/scripts/plotting_functions.R")
-data_folder <- "/project2/xinhe/yifan/Factor_analysis/LUHMES/"
+wkdir <- "/project2/xinhe/yifan/Factor_analysis/LUHMES/"
+result_folder <- "gsfa_output_detect_01/use_negctrl/"
 ```
 
 The first thing we need is the output of GSFA `fit_gsfa_multivar()` run. The lighter version containing just the posterior mean estimates and LFSR of perturbation-gene effects is enough.
 
 ```{r}
-fit <- readRDS(paste0(data_folder,
-                      "gsfa_output_detect_01/use_negctrl/All.gibbs_obj_k20.svd_negctrl.seed_14314.light.rds"))
+fit <- readRDS(paste0(wkdir, result_folder,
+                      "All.gibbs_obj_k20.svd_negctrl.seed_14314.light.rds"))
 gibbs_PM <- fit$posterior_means
 lfsr_mat <- fit$lfsr[, -ncol(fit$lfsr)]
 total_effect <- fit$total_effect[, -ncol(fit$total_effect)]
@@ -75,18 +76,18 @@ KO_names <- colnames(lfsr_mat)
 We also need the cell by perturbation matrix which was used as input $G$ for GSFA.
 
 ```{r}
-metadata <- readRDS(paste0(data_folder, "processed_data/merged_metadata.rds"))
+metadata <- readRDS(paste0(wkdir, "processed_data/merged_metadata.rds"))
 G_mat <- metadata[, 4:18]
 ```
 
 Finally, we load the mapping from gene name to ENSEMBL ID for all 6k genes used in GSFA, as well as selected neuronal marker genes. This is specific to this study and analysis.
 
 ```{r}
-feature.names <- data.frame(fread(paste0(data_folder, "GSE142078_raw/GSM4219576_Run2_genes.tsv.gz"),
+feature.names <- data.frame(fread(paste0(wkdir, "GSE142078_raw/GSM4219576_Run2_genes.tsv.gz"),
                                   header = FALSE), stringsAsFactors = FALSE)
 genes_df <- feature.names[match(rownames(lfsr_mat), feature.names$V1), ]
 names(genes_df) <- c("ID", "Name")
-interest_df <- readRDS(paste0(data_folder, "processed_data/selected_neuronal_markers.rds"))
+interest_df <- readRDS(paste0(wkdir, "processed_data/selected_neuronal_markers.rds"))
 ```
 
 # Factor ~ Perturbation Association
@@ -218,7 +219,7 @@ for (i in 1:ncol(PIP_mat)){
 ```
 
 ```{r echo=FALSE}
-enrich_res_by_factor <- readRDS(paste0(data_folder, "gsfa_output_detect_01/use_negctrl/WebGestalt_ORA/GO_enrich_in_GSFA_factors.rds"))
+enrich_res_by_factor <- readRDS(paste0(wkdir, result_folder, "WebGestalt_ORA/GO_enrich_in_GSFA_factors.rds"))
 ```
 
 Several GO “biological process” terms related to neuronal development are enriched in factors 4, 9, and 16 (Figure 5D):
@@ -290,7 +291,7 @@ guides <- KO_names[KO_names!="Nontargeting"]
 ```{r deseq}
 deseq_list <- list()
 for (m in guides){
-  fname <- paste0(data_folder, "processed_data/DESeq2/dev_top6k_negctrl/gRNA_", 
+  fname <- paste0(wkdir, "processed_data/DESeq2/dev_top6k_negctrl/gRNA_", 
                   m, ".dev_res_top6k.vs_negctrl.rds")
   res <- readRDS(fname)
   res <- as.data.frame(res@listData, row.names = res@rownames)
@@ -304,7 +305,7 @@ deseq_signif_counts <- sapply(deseq_list, function(x){filter(x, FDR < fdr_cutoff
 ```{r mast}
 mast_list <- list()
 for (m in guides){
-  fname <- paste0(data_folder, "processed_data/MAST/dev_top6k_negctrl/gRNA_", 
+  fname <- paste0(wkdir, "processed_data/MAST/dev_top6k_negctrl/gRNA_", 
                   m, ".dev_res_top6k.vs_negctrl.rds")
   tmp_df <- readRDS(fname)
   tmp_df$geneID <- rownames(tmp_df)
@@ -315,7 +316,7 @@ mast_signif_counts <- sapply(mast_list, function(x){filter(x, FDR < fdr_cutoff) 
 ```
 
 ```{r}
-scmageck_res <- readRDS(paste0(data_folder, "scmageck/scmageck_lr.LUHMES.dev_res_top_6k.rds"))
+scmageck_res <- readRDS(paste0(wkdir, "scmageck/scmageck_lr.LUHMES.dev_res_top_6k.rds"))
 colnames(scmageck_res$fdr)[colnames(scmageck_res$fdr) == "NegCtrl"] <- "Nontargeting"
 scmageck_signif_counts <- colSums(scmageck_res$fdr[, KO_names] < fdr_cutoff)
 scmageck_signif_counts <- scmageck_signif_counts[names(scmageck_signif_counts) != "Nontargeting"]
@@ -353,7 +354,8 @@ dge_plot_df <- reshape2::melt(dge_comparison_df, id.var = "Perturbation",
 dge_plot_df$Perturbation <- factor(dge_plot_df$Perturbation,
                                    levels = guides)
                                    # levels = c("NegCtrl", KO_names[KO_names!="Nontargeting"]))
-ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
+dge_plt <- ggplot(dge_plot_df,
+                  aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
   geom_bar(position = "dodge", stat = "identity") +
   geom_text(aes(label = Num_DEGs), position=position_dodge(width=0.9), vjust=-0.25) +
   scale_y_log10() +
@@ -364,6 +366,12 @@ ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
         legend.position = "bottom",
         legend.text = element_text(size = 13))
+dge_plt
+```
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_5E.pdf", width=13, height=4)
+dge_plt + theme(legend.position = "right")
+dev.off()
 ```
 
 ## Perturbation effects on marker genes
@@ -520,7 +528,7 @@ for (i in targets){
 ```
 
 ```{r echo=FALSE}
-enrich_res <- readRDS(paste0(data_folder, "gsfa_output_detect_01/use_negctrl/WebGestalt_ORA/GO_enrich_in_GSFA_DEGs.rds"))
+enrich_res <- readRDS(paste0(wkdir, result_folder, "WebGestalt_ORA/GO_enrich_in_GSFA_DEGs.rds"))
 ```
 
 ```{r}
@@ -612,6 +620,50 @@ map <- Heatmap(abs(interest_enrich_table),
                column_names_side = "top",
                width = unit(6, "cm"))
 draw(map, heatmap_legend_side = "bottom")
+```
+
+Similar GO enrichment analyses were performed on DEGs detected by alternative methods (FDR < 0.05).  
+Below summarizes the number of significant GO terms in DEGs by each method:
+
+```{r Fig_5F, fig.height=4, fig.width=7.5}
+enrich_thres <- 0.05
+enrich_dir <- paste0(wkdir, result_folder, "WebGestalt_ORA/")
+enrich_res <- readRDS(paste0(enrich_dir,
+                             "GO_enrich_in_GSFA_DEGs.rds"))
+gsfa_term_count <-
+  sapply(enrich_res, function(x){ x %>% dplyr::filter(FDR < enrich_thres) %>% nrow()})
+# Skip low count target genes to simplify plot.
+gsfa_term_count <- gsfa_term_count[gsfa_term_count > 10]
+
+term_count_df <- data.frame(Perturbation = names(gsfa_term_count),
+                            GSFA = as.numeric(gsfa_term_count))
+for (method in c("scmageck", "DESeq2", "MAST", "sceptre")) {
+  enrich_res <- readRDS(paste0(enrich_dir,
+                               method, "_DEGs_fdr_0.05.go_bp_thres_1.rds"))
+  term_count <-
+    sapply(enrich_res, function(x){ x %>% dplyr::filter(FDR < enrich_thres) %>% nrow()})
+  term_count_df[[method]] <- term_count[term_count_df$Perturbation]
+}
+names(term_count_df)[c(3, 6)] <- c("scMAGeCK", "SCEPTRE")
+term_plot_df <- term_count_df %>%
+  tidyr::pivot_longer(cols = !Perturbation,
+                      names_to = "Method", values_to = "Num_GO_terms") %>%
+  dplyr::mutate(Method = factor(Method, levels = names(term_count_df)[-1]))
+term_plot_df$Num_GO_terms <-
+  tidyr::replace_na(term_plot_df$Num_GO_terms, 0)
+
+num_terms_plt <-
+  ggplot(term_plot_df, aes(x = Perturbation, y = Num_GO_terms, fill = Method)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_text(aes(label = Num_GO_terms),
+            position = position_dodge(width = 0.9), vjust = -0.25) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(x = "Target gene",
+       y = "Number of enriched GO terms",
+       title = "Number of GO terms enriched in DEGs detected by different methods") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        legend.text = element_text(size = 13))
+num_terms_plt
 ```
 
 # Session Information

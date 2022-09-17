@@ -389,13 +389,14 @@ dyn.load(&#39;/software/geos-3.7.0-el7-x86_64/lib64/libgeos_c.so&#39;)
 library(Seurat)
 
 source(&quot;/project2/xinhe/yifan/Factor_analysis/analysis_website_for_Kevin/scripts/plotting_functions.R&quot;)
-data_folder &lt;- &quot;/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/&quot;</code></pre>
+wkdir &lt;- &quot;/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/&quot;
+result_folder &lt;- &quot;gsfa_output_detect_01/all_uncorrected_by_group.use_negctrl/&quot;</code></pre>
 <p>The first thing we need is the output of GSFA
 <code>fit_gsfa_multivar_2groups()</code> run. The lighter version
 containing just the posterior mean estimates and LFSR of
 perturbation-gene effects is enough.</p>
-<pre class="r"><code>fit &lt;- readRDS(paste0(data_folder,
-                      &quot;gsfa_output_detect_01/all_uncorrected_by_group.use_negctrl/All.gibbs_obj_k20.svd_negctrl.restart.light.rds&quot;))
+<pre class="r"><code>fit &lt;- readRDS(paste0(wkdir, result_folder,
+                      &quot;All.gibbs_obj_k20.svd_negctrl.restart.light.rds&quot;))
 gibbs_PM &lt;- fit$posterior_means
 lfsr_mat1 &lt;- fit$lfsr1[, -ncol(fit$lfsr1)]
 lfsr_mat0 &lt;- fit$lfsr0[, -ncol(fit$lfsr0)]
@@ -404,16 +405,16 @@ total_effect0 &lt;- fit$total_effect0[, -ncol(fit$total_effect0)]
 KO_names &lt;- colnames(lfsr_mat1)</code></pre>
 <p>We also need the cell by perturbation matrix which was used as input
 <span class="math inline">\(G\)</span> for GSFA.</p>
-<pre class="r"><code>metadata &lt;- readRDS(paste0(data_folder, &quot;processed_data/metadata.all_T_cells_merged.rds&quot;))
+<pre class="r"><code>metadata &lt;- readRDS(paste0(wkdir, &quot;processed_data/metadata.all_T_cells_merged.rds&quot;))
 G_mat &lt;- metadata[, 4:24]</code></pre>
 <p>Finally, we load the mapping from gene name to ENSEMBL ID for all 6k
 genes used in GSFA, as well as selected T cell marker genes. This is
 specific to this study and analysis.</p>
-<pre class="r"><code>feature.names &lt;- data.frame(fread(paste0(data_folder, &quot;GSE119450_RAW/D1N/genes.tsv&quot;),
+<pre class="r"><code>feature.names &lt;- data.frame(fread(paste0(wkdir, &quot;GSE119450_RAW/D1N/genes.tsv&quot;),
                                   header = FALSE), stringsAsFactors = FALSE)
 genes_df &lt;- feature.names[match(rownames(lfsr_mat1), feature.names$V1), ]
 names(genes_df) &lt;- c(&quot;ID&quot;, &quot;Name&quot;)
-interest_df &lt;- readRDS(paste0(data_folder, &quot;processed_data/selected_tcell_markers.rds&quot;))</code></pre>
+interest_df &lt;- readRDS(paste0(wkdir, &quot;processed_data/selected_tcell_markers.rds&quot;))</code></pre>
 </div>
 </div>
 <div id="factor-perturbation-associations" class="section level1"
@@ -782,7 +783,7 @@ factors on UMAP</h2>
 # seurat_obj &lt;- RunPCA(seurat_obj, verbose = F)
 # seurat_obj &lt;- FindNeighbors(seurat_obj, reduction = &quot;pca&quot;)
 # seurat_obj &lt;- RunUMAP(seurat_obj, reduction = &quot;pca&quot;, dims = 1:30)
-seurat_obj &lt;- readRDS(paste0(data_folder,
+seurat_obj &lt;- readRDS(paste0(wkdir,
                              &quot;processed_data/seurat_obj.all_T_cells_merged.uncorrected.rds&quot;))
 # Add GSFA factor loadings to the seurat obj.
 stopifnot(rownames(gibbs_PM$Z_pm) == Cells(seurat_obj))
@@ -1014,7 +1015,7 @@ Num_genes
 <pre class="r"><code>guides &lt;- KO_names[KO_names!=&quot;NonTarget&quot;]</code></pre>
 <pre class="r"><code>deseq_list &lt;- list()
 for (m in guides){
-  fname &lt;- paste0(data_folder, &quot;processed_data/DESeq2/all_by_stim_negctrl/gRNA_&quot;, 
+  fname &lt;- paste0(wkdir, &quot;processed_data/DESeq2/all_by_stim_negctrl/gRNA_&quot;, 
                   m, &quot;.dev_res_top6k.vs_negctrl.rds&quot;)
   res &lt;- readRDS(fname)
   res &lt;- as.data.frame(res@listData, row.names = res@rownames)
@@ -1025,7 +1026,7 @@ for (m in guides){
 deseq_signif_counts &lt;- sapply(deseq_list, function(x){filter(x, FDR &lt; fdr_cutoff) %&gt;% nrow()})</code></pre>
 <pre class="r"><code>mast_list &lt;- list()
 for (m in guides){
-  fname &lt;- paste0(data_folder, &quot;processed_data/MAST/all_by_stim_negctrl/gRNA_&quot;, 
+  fname &lt;- paste0(wkdir, &quot;processed_data/MAST/all_by_stim_negctrl/gRNA_&quot;, 
                   m, &quot;.dev_res_top6k.vs_negctrl.rds&quot;)
   tmp_df &lt;- readRDS(fname)
   tmp_df$geneID &lt;- rownames(tmp_df)
@@ -1033,7 +1034,7 @@ for (m in guides){
   mast_list[[m]] &lt;- tmp_df
 }
 mast_signif_counts &lt;- sapply(mast_list, function(x){filter(x, FDR &lt; fdr_cutoff) %&gt;% nrow()})</code></pre>
-<pre class="r"><code>scmageck_res &lt;- readRDS(paste0(data_folder, &quot;scmageck/scmageck_lr.TCells_stim.dev_res_top_6k.rds&quot;))
+<pre class="r"><code>scmageck_res &lt;- readRDS(paste0(wkdir, &quot;scmageck/scmageck_lr.TCells_stim.dev_res_top_6k.rds&quot;))
 colnames(scmageck_res$fdr)[colnames(scmageck_res$fdr) == &quot;NegCtrl&quot;] &lt;- &quot;NonTarget&quot;
 scmageck_signif_counts &lt;- colSums(scmageck_res$fdr[, KO_names] &lt; fdr_cutoff)
 scmageck_signif_counts &lt;- scmageck_signif_counts[names(scmageck_signif_counts) != &quot;NonTarget&quot;]</code></pre>
@@ -1062,7 +1063,8 @@ detected the most DEGs for 15 gene targets.</p>
 dge_plot_df$Perturbation &lt;- factor(dge_plot_df$Perturbation,
                                    levels = guides)
                                    # levels = c(&quot;NegCtrl&quot;, KO_names[KO_names!=&quot;NonTarget&quot;]))
-ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
+dge_plt &lt;- ggplot(dge_plot_df,
+                  aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
   geom_bar(position = &quot;dodge&quot;, stat = &quot;identity&quot;) +
   geom_text(aes(label = Num_DEGs),
             position = position_dodge(width = 0.9), vjust = -0.25) +
@@ -1073,7 +1075,8 @@ ggplot(dge_plot_df, aes(x = Perturbation, y = Num_DEGs+1, fill = Method)) +
        title = &quot;Number of DEGs detected by different methods&quot;) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
         legend.position = &quot;bottom&quot;,
-        legend.text = element_text(size = 13))</code></pre>
+        legend.text = element_text(size = 13))
+dge_plt</code></pre>
 <p><img src="interpret_gsfa_TCells_files/figure-html/Fig_4A-1.png" width="1248" style="display: block; margin: auto;" /></p>
 </div>
 <div id="perturbation-effects-on-marker-genes" class="section level2"
@@ -1087,8 +1090,9 @@ proliferation states.</p>
 <h3><span class="header-section-number">4.2.1</span> GSFA</h3>
 <p>Here are the summarized effects of perturbations on marker genes
 estimated by GSFA (Figure 4D).</p>
-<pre class="r"><code>targets &lt;- c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;, 
-             &quot;DGKA&quot;, &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)
+<pre class="r"><code>interest_df &lt;- rbind(interest_df, c(&quot;TOPBP1&quot;, &quot;Cell proliferation&quot;, &quot;&quot;, &quot;ENSG00000163781&quot;))
+targets &lt;- c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;,
+             &quot;DGKZ&quot;, &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)
 complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = lfsr_mat1,
@@ -1107,7 +1111,7 @@ detected:</p>
                               targets = names(lfsr_signif_num)[lfsr_signif_num &gt; 0],
                               lfsr_mat = lfsr_mat1,
                               effect_mat = total_effect1)</code></pre>
-<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-17-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-18-1.png" width="768" style="display: block; margin: auto;" /></p>
 </div>
 <div id="scmageck" class="section level3" number="4.2.2">
 <h3><span class="header-section-number">4.2.2</span> scMAGeCK</h3>
@@ -1235,16 +1239,13 @@ signif_term_df &lt;- do.call(rbind, signif_GO_list) %&gt;%
 
 abs_FC_colormap &lt;- circlize::colorRamp2(breaks = c(0, 3, 6),
                                         colors = c(&quot;grey95&quot;, &quot;#77d183&quot;, &quot;#255566&quot;))</code></pre>
-<pre class="r"><code># targets &lt;- c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;,
-#              &quot;DGKA&quot;, &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)
-targets &lt;- names(enrich_res)
-enrich_table &lt;- data.frame(matrix(nrow = nrow(signif_term_df),
-                                  ncol = length(targets)),
+<pre class="r"><code>enrich_table &lt;- data.frame(matrix(nrow = nrow(signif_term_df),
+                                  ncol = length(names(enrich_res))),
                            row.names = signif_term_df$geneSet)
-colnames(enrich_table) &lt;- targets
+colnames(enrich_table) &lt;- names(enrich_res)
 for (i in 1:ncol(enrich_table)){
   m &lt;- colnames(enrich_table)[i]
-  enrich_df &lt;- enrich_res[[m]] %&gt;% filter(enrichmentRatio &gt; 2)
+  enrich_df &lt;- enrich_res[[m]] # %&gt;% filter(enrichmentRatio &gt; 2)
   enrich_table[enrich_df$geneSet, i] &lt;- enrich_df$enrichmentRatio
 }
 rownames(enrich_table) &lt;- signif_term_df$description</code></pre>
@@ -1258,8 +1259,7 @@ interest_enrich_table[is.na(interest_enrich_table)] &lt;- 0
 # Convert only the first letter of each GO term to upper case.
 rownames(interest_enrich_table) &lt;-
   str_replace(rownames(interest_enrich_table),  &quot;^\\w{1}&quot;, toupper)
-map &lt;- Heatmap(interest_enrich_table[, c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;,
-                                         &quot;DGKA&quot;, &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)],
+map &lt;- Heatmap(interest_enrich_table[, targets],
                name = &quot;Fold of enrichment&quot;,
                col = abs_FC_colormap,
                row_title = NULL, column_title = NULL,
@@ -1275,6 +1275,9 @@ draw(map, heatmap_legend_side = &quot;right&quot;)</code></pre>
 detected:</p>
 <pre class="r"><code>interest_enrich_table &lt;- enrich_table[terms_of_interest_df$description, ]
 interest_enrich_table[is.na(interest_enrich_table)] &lt;- 0
+# Convert only the first letter of each GO term to upper case.
+rownames(interest_enrich_table) &lt;-
+  str_replace(rownames(interest_enrich_table),  &quot;^\\w{1}&quot;, toupper)
 
 map &lt;- Heatmap(interest_enrich_table,
                name = &quot;Fold of enrichment&quot;,
@@ -1287,7 +1290,51 @@ map &lt;- Heatmap(interest_enrich_table,
                column_names_rot = 45,
                width = unit(10, &quot;cm&quot;))
 draw(map, heatmap_legend_side = &quot;right&quot;)</code></pre>
-<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-25-1.png" width="1152" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-26-1.png" width="1152" style="display: block; margin: auto;" /></p>
+<p>Similar GO enrichment analyses were performed on DEGs detected by
+alternative methods (FDR &lt; 0.05).<br />
+Below summarizes the number of significant GO terms in DEGs by each
+method:</p>
+<pre class="r"><code>enrich_thres &lt;- 0.05
+enrich_dir &lt;- paste0(wkdir, result_folder, &quot;WebGestalt_ORA/&quot;)
+enrich_res &lt;- readRDS(paste0(enrich_dir,
+                             &quot;GO_enrich_in_GSFA_DEGs_stimulated.rds&quot;))
+gsfa_term_count &lt;-
+  sapply(enrich_res, function(x){ x %&gt;% dplyr::filter(FDR &lt; enrich_thres) %&gt;% nrow()})
+# Skip low count target genes to simplify plot.
+gsfa_term_count &lt;- gsfa_term_count[gsfa_term_count &gt; 10]
+
+term_count_df &lt;- data.frame(Perturbation = names(gsfa_term_count),
+                            GSFA = as.numeric(gsfa_term_count))
+for (method in c(&quot;scmageck&quot;, &quot;DESeq2&quot;, &quot;MAST&quot;, &quot;sceptre&quot;)) {
+  enrich_res &lt;- readRDS(paste0(enrich_dir,
+                               method, &quot;_DEGs_fdr_0.05.go_bp_thres_1.stim.rds&quot;))
+  term_count &lt;-
+    sapply(enrich_res, function(x){ x %&gt;% dplyr::filter(FDR &lt; enrich_thres) %&gt;% nrow()})
+  term_count_df[[method]] &lt;- term_count[term_count_df$Perturbation]
+}
+names(term_count_df)[c(3, 6)] &lt;- c(&quot;scMAGeCK&quot;, &quot;SCEPTRE&quot;)
+term_plot_df &lt;- term_count_df %&gt;%
+  tidyr::pivot_longer(cols = !Perturbation,
+                      names_to = &quot;Method&quot;, values_to = &quot;Num_GO_terms&quot;) %&gt;%
+  dplyr::mutate(Method = factor(Method, levels = names(term_count_df)[-1]))
+term_plot_df$Num_GO_terms &lt;-
+  tidyr::replace_na(term_plot_df$Num_GO_terms, 0)
+
+num_terms_plt &lt;-
+  ggplot(term_plot_df, aes(x = Perturbation, y = Num_GO_terms, fill = Method)) +
+  geom_bar(position = &quot;dodge&quot;, stat = &quot;identity&quot;) +
+  geom_text(aes(label = Num_GO_terms),
+            position = position_dodge(width = 0.9), vjust = -0.25) +
+  scale_fill_brewer(palette = &quot;Set2&quot;) +
+  labs(x = &quot;Target gene&quot;,
+       y = &quot;Number of enriched GO terms&quot;,
+       title = &quot;Number of GO terms enriched in DEGs detected by different methods&quot;) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
+        legend.text = element_text(size = 13))
+num_terms_plt +
+  theme(legend.position = &quot;none&quot;)</code></pre>
+<p><img src="interpret_gsfa_TCells_files/figure-html/Fig_4B-1.png" width="720" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="session-information" class="section level1" number="5">
