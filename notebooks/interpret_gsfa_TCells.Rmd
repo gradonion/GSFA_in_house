@@ -690,7 +690,6 @@ terms_of_interest[[6]] <-
 
 terms_of_interest[[7]] <-
   data.frame(description = c("actin filament organization",
-                             "microtubule cytoskeleton organization involved in mitosis",
                              "chromatin assembly or disassembly",
                              "mitotic cell cycle phase transition",
                              "regulation of cell division"))
