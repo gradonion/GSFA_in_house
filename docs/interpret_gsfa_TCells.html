@@ -410,11 +410,18 @@ G_mat &lt;- metadata[, 4:24]</code></pre>
 <p>Finally, we load the mapping from gene name to ENSEMBL ID for all 6k
 genes used in GSFA, as well as selected T cell marker genes. This is
 specific to this study and analysis.</p>
-<pre class="r"><code>feature.names &lt;- data.frame(fread(paste0(wkdir, &quot;GSE119450_RAW/D1N/genes.tsv&quot;),
+<pre class="r"><code># Load gene ensembl IDs and matched gene symbols.
+feature.names &lt;- data.frame(fread(paste0(wkdir, &quot;GSE119450_RAW/D1N/genes.tsv&quot;),
                                   header = FALSE), stringsAsFactors = FALSE)
 genes_df &lt;- feature.names[match(rownames(lfsr_mat1), feature.names$V1), ]
 names(genes_df) &lt;- c(&quot;ID&quot;, &quot;Name&quot;)
-interest_df &lt;- readRDS(paste0(wkdir, &quot;processed_data/selected_tcell_markers.rds&quot;))</code></pre>
+# Load marker genes in T cells.
+interest_df &lt;- readRDS(paste0(wkdir, &quot;processed_data/selected_tcell_markers.rds&quot;))
+interest_df &lt;- interest_df %&gt;%
+  dplyr::filter(gene_name != &quot;TOP2A&quot;)
+interest_df &lt;- rbind(interest_df,
+                     c(&quot;TOPBP1&quot;, &quot;Cell proliferation&quot;,
+                       &quot;DNA topoisomerase II binding protein 1&quot;, &quot;ENSG00000163781&quot;))</code></pre>
 </div>
 </div>
 <div id="factor-perturbation-associations" class="section level1"
@@ -440,7 +447,7 @@ on at least 1 of the 20 inferred factors.</p>
 <p>Here is a closer look at the estimated effects of selected
 perturbations on selected factors (Figure 3A):</p>
 <pre class="r"><code>targets &lt;- c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;, 
-             &quot;DGKA&quot;, &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)
+             &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)
 complexplot_perturbation_factor(gibbs_PM$Gamma1_pm[-nrow(gibbs_PM$Gamma1_pm), ],
                                 gibbs_PM$beta1_pm[-nrow(gibbs_PM$beta1_pm), ],
                                 marker_names = KO_names, reorder_markers = targets,
@@ -669,20 +676,6 @@ ENSG00000148773
 </tr>
 <tr>
 <td style="text-align:left;">
-TOP2A
-</td>
-<td style="text-align:left;">
-Cell proliferation
-</td>
-<td style="text-align:left;">
-DNA topoisomerase II alpha
-</td>
-<td style="text-align:left;">
-ENSG00000131747
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
 CENPF
 </td>
 <td style="text-align:left;">
@@ -693,6 +686,20 @@ Centromere protein F
 </td>
 <td style="text-align:left;">
 ENSG00000117724
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+TOPBP1
+</td>
+<td style="text-align:left;">
+Cell proliferation
+</td>
+<td style="text-align:left;">
+DNA topoisomerase II binding protein 1
+</td>
+<td style="text-align:left;">
+ENSG00000163781
 </td>
 </tr>
 </tbody>
@@ -845,7 +852,8 @@ class="section level2" number="4.1">
 <h2><span class="header-section-number">4.1</span> Number of DEGs
 detected by different methods</h2>
 <pre class="r"><code>fdr_cutoff &lt;- 0.05
-lfsr_cutoff &lt;- 0.05</code></pre>
+lfsr_cutoff &lt;- 0.05
+guides &lt;- KO_names[KO_names!=&quot;NonTarget&quot;]</code></pre>
 <div
 style="border: 1px solid #ddd; padding: 5px; overflow-x: scroll; width:100%; ">
 <table class="table" style="margin-left: auto; margin-right: auto;">
@@ -1012,7 +1020,6 @@ Num_genes
 </tbody>
 </table>
 </div>
-<pre class="r"><code>guides &lt;- KO_names[KO_names!=&quot;NonTarget&quot;]</code></pre>
 <pre class="r"><code>deseq_list &lt;- list()
 for (m in guides){
   fname &lt;- paste0(wkdir, &quot;processed_data/DESeq2/all_by_stim_negctrl/gRNA_&quot;, 
@@ -1068,6 +1075,7 @@ dge_plt &lt;- ggplot(dge_plot_df,
   geom_bar(position = &quot;dodge&quot;, stat = &quot;identity&quot;) +
   geom_text(aes(label = Num_DEGs),
             position = position_dodge(width = 0.9), vjust = -0.25) +
+  geom_hline(yintercept = 100, color = &quot;grey50&quot;, linetype = &quot;dotted&quot;) +
   scale_y_log10() +
   scale_fill_brewer(palette = &quot;Set2&quot;) +
   labs(x = &quot;Target gene&quot;,
@@ -1090,9 +1098,9 @@ proliferation states.</p>
 <h3><span class="header-section-number">4.2.1</span> GSFA</h3>
 <p>Here are the summarized effects of perturbations on marker genes
 estimated by GSFA (Figure 4D).</p>
-<pre class="r"><code>interest_df &lt;- rbind(interest_df, c(&quot;TOPBP1&quot;, &quot;Cell proliferation&quot;, &quot;&quot;, &quot;ENSG00000163781&quot;))
-targets &lt;- c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;,
-             &quot;DGKZ&quot;, &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;)
+<pre class="r"><code># Only keep target genes with &gt; 100 DEGs to simplify plot.
+targets &lt;- c(&quot;ARID1A&quot;, &quot;LCP2&quot;, &quot;BTLA&quot;, &quot;CD5&quot;, &quot;CBLB&quot;, &quot;RASA2&quot;,
+             &quot;TCEB2&quot;, &quot;SOCS1&quot;, &quot;CDKN1B&quot;, &quot;DGKZ&quot;)
 complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = lfsr_mat1,
@@ -1111,7 +1119,7 @@ detected:</p>
                               targets = names(lfsr_signif_num)[lfsr_signif_num &gt; 0],
                               lfsr_mat = lfsr_mat1,
                               effect_mat = total_effect1)</code></pre>
-<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-18-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-17-1.png" width="768" style="display: block; margin: auto;" /></p>
 </div>
 <div id="scmageck" class="section level3" number="4.2.2">
 <h3><span class="header-section-number">4.2.2</span> scMAGeCK</h3>
@@ -1290,7 +1298,7 @@ map &lt;- Heatmap(interest_enrich_table,
                column_names_rot = 45,
                width = unit(10, &quot;cm&quot;))
 draw(map, heatmap_legend_side = &quot;right&quot;)</code></pre>
-<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-26-1.png" width="1152" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_TCells_files/figure-html/unnamed-chunk-25-1.png" width="1152" style="display: block; margin: auto;" /></p>
 <p>Similar GO enrichment analyses were performed on DEGs detected by
 alternative methods (FDR &lt; 0.05).<br />
 Below summarizes the number of significant GO terms in DEGs by each
@@ -1301,8 +1309,8 @@ enrich_res &lt;- readRDS(paste0(enrich_dir,
                              &quot;GO_enrich_in_GSFA_DEGs_stimulated.rds&quot;))
 gsfa_term_count &lt;-
   sapply(enrich_res, function(x){ x %&gt;% dplyr::filter(FDR &lt; enrich_thres) %&gt;% nrow()})
-# Skip low count target genes to simplify plot.
-gsfa_term_count &lt;- gsfa_term_count[gsfa_term_count &gt; 10]
+# Only keep target genes with &gt; 100 DEGs to simplify plot.
+gsfa_term_count &lt;- gsfa_term_count[targets]
 
 term_count_df &lt;- data.frame(Perturbation = names(gsfa_term_count),
                             GSFA = as.numeric(gsfa_term_count))
@@ -1332,8 +1340,7 @@ num_terms_plt &lt;-
        title = &quot;Number of GO terms enriched in DEGs detected by different methods&quot;) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
         legend.text = element_text(size = 13))
-num_terms_plt +
-  theme(legend.position = &quot;none&quot;)</code></pre>
+num_terms_plt</code></pre>
 <p><img src="interpret_gsfa_TCells_files/figure-html/Fig_4B-1.png" width="720" style="display: block; margin: auto;" /></p>
 </div>
 </div>

@@ -341,13 +341,19 @@ complexplot_gene_factor <- function(genes_df, interest_df,
   draw(map1, annotation_legend_list = lgd_list)
 }
 
-complexplot_gene_perturbation <- function(genes_df, interest_df,
+complexplot_gene_perturbation <- function(genes_df,
+                                          interest_df,
                                           targets = NULL,
-                                          lfsr_mat, lfsr_name = "LFSR",
+                                          lfsr_mat,
+                                          lfsr_name = "LFSR",
                                           lfsr_cutoff = 0.05,
-                                          effect_mat, effect_name = "GSFA\nsummarized effect",
+                                          effect_mat,
+                                          effect_name = "GSFA\nsummarized effect",
+                                          # Bin LFSR or FDR values into `num_lfsr_bins` sizes.
+                                          num_lfsr_bins = 2,
                                           score_break = seq(-0.2, 0.2, 0.1),
-                                          color_break = c("blue3", "blue", "grey90", "red", "red3")){
+                                          color_break = c("blue3", "blue", "grey90", "red", "red3")) {
+  
   interest_df <- interest_df[interest_df$gene_name %in% genes_df$Name, ]
   interest_df$type <- factor(interest_df$type, levels = unique(interest_df$type))
   if (all(startsWith(rownames(lfsr_mat), "ENSG"))){
@@ -368,13 +374,25 @@ complexplot_gene_perturbation <- function(genes_df, interest_df,
   selected_effect_mat <- effect_mat[interest_df$gene_name, targets]
   
   selected_lfsr_mat <- lfsr_mat[interest_df$gene_name, targets]
-  binned_size_mat <- matrix(0.6, 
-                            nrow = nrow(selected_lfsr_mat),
-                            ncol = ncol(selected_lfsr_mat))
+  if (num_lfsr_bins == 3) {
+    # 3 LSFR or FDR bins: "> 0.25", "0.05 - 0.25", "0 - 0.05"
+    # which corresponds to 3 sizes from small to large: 0.2, 0.6, 1
+    binned_size_mat <- matrix(0.6, 
+                              nrow = nrow(selected_lfsr_mat),
+                              ncol = ncol(selected_lfsr_mat))
+    binned_size_mat[selected_lfsr_mat <= 0.05] <- 1
+    binned_size_mat[selected_lfsr_mat > 0.25] <- 0.2
+  }
+  if (num_lfsr_bins == 2) {
+    # 2 LSFR or FDR bins: "> 0.05", "0 - 0.05"
+    # which corresponds to 2 sizes from small to large: 0.2, 1
+    binned_size_mat <- matrix(0.2, 
+                              nrow = nrow(selected_lfsr_mat),
+                              ncol = ncol(selected_lfsr_mat))
+    binned_size_mat[selected_lfsr_mat <= 0.05] <- 1
+  }
   rownames(binned_size_mat) <- rownames(selected_lfsr_mat)
   colnames(binned_size_mat) <- colnames(selected_lfsr_mat)
-  binned_size_mat[selected_lfsr_mat <= 0.05] <- 1
-  binned_size_mat[selected_lfsr_mat > 0.25] <- 0.2
   
   lgd_list <- list()
   col_fun <- circlize::colorRamp2(breaks = score_break,
@@ -382,23 +400,38 @@ complexplot_gene_perturbation <- function(genes_df, interest_df,
   lgd_list[["effectsize"]] <- Legend(title = effect_name,
                                      at = score_break,
                                      col_fun = col_fun)
-  
-  lfsr_tic_values <- c(0.2, 0.6, 1)
-  lfsr_tic_labels <- c("> 0.25", "0.05 - 0.25", "0 - 0.05")
-  
-  lgd_list[["LFSR"]] <- 
-    Legend(title = lfsr_name,
-           labels = lfsr_tic_labels,
-           grid_height = unit(6, "mm"),
-           grid_width = unit(6, "mm"),
-           graphics = list(
-             function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[1] + 0.2) * unit(2, "mm"),
-                                              gp = gpar(fill = "black")),
-             function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[2] + 0.2) * unit(2, "mm"),
-                                              gp = gpar(fill = "black")),
-             function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[3] + 0.2) * unit(2, "mm"),
-                                              gp = gpar(fill = "black"))
-           ))
+  if (num_lfsr_bins == 3) {
+    lfsr_tic_values <- c(0.2, 0.6, 1)
+    lfsr_tic_labels <- c("> 0.25", "0.05 - 0.25", "0 - 0.05")
+    lgd_list[["LFSR"]] <- 
+      Legend(title = lfsr_name,
+             labels = lfsr_tic_labels,
+             grid_height = unit(6, "mm"),
+             grid_width = unit(6, "mm"),
+             graphics = list(
+               function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[1] + 0.2) * unit(2, "mm"),
+                                                gp = gpar(fill = "black")),
+               function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[2] + 0.2) * unit(2, "mm"),
+                                                gp = gpar(fill = "black")),
+               function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[3] + 0.2) * unit(2, "mm"),
+                                                gp = gpar(fill = "black"))
+             ))
+  }
+  if (num_lfsr_bins == 2) {
+    lfsr_tic_values <- c(0.2, 1)
+    lfsr_tic_labels <- c("> 0.05", "0 - 0.05")
+    lgd_list[["LFSR"]] <- 
+      Legend(title = lfsr_name,
+             labels = lfsr_tic_labels,
+             grid_height = unit(6, "mm"),
+             grid_width = unit(6, "mm"),
+             graphics = list(
+               function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[1] + 0.2) * unit(2, "mm"),
+                                                gp = gpar(fill = "black")),
+               function(x, y, w, h) grid.circle(x, y, r = (lfsr_tic_values[2] + 0.2) * unit(2, "mm"),
+                                                gp = gpar(fill = "black"))
+             ))
+  }
   
   marker_colormap <- structure(RColorBrewer::brewer.pal(length(levels(interest_df$type)), "Set3"),
                                names = levels(interest_df$type))

@@ -600,8 +600,7 @@ Here are selected GO "biological process" terms and their folds of enrichment in
 (In the code below, we omitted the content in `terms_of_interest_df` as one can subset the `enrich_table` with any terms of their choice.)
 
 ```{r Fig_S6F, fig.height=5.5, fig.width=8}
-interest_enrich_table <- enrich_table[terms_of_interest_df$description,
-                                      colnames(enrich_table) != "DYRK1A"]
+interest_enrich_table <- enrich_table[terms_of_interest_df$description, ]
 interest_enrich_table[is.na(interest_enrich_table)] <- 0
 # Convert only the first letter of each GO term to upper case.
 rownames(interest_enrich_table) <-

@@ -1162,8 +1162,7 @@ enrichment in DEGs detected by GSFA (Figure S6F):<br />
 (In the code below, we omitted the content in
 <code>terms_of_interest_df</code> as one can subset the
 <code>enrich_table</code> with any terms of their choice.)</p>
-<pre class="r"><code>interest_enrich_table &lt;- enrich_table[terms_of_interest_df$description,
-                                      colnames(enrich_table) != &quot;DYRK1A&quot;]
+<pre class="r"><code>interest_enrich_table &lt;- enrich_table[terms_of_interest_df$description, ]
 interest_enrich_table[is.na(interest_enrich_table)] &lt;- 0
 # Convert only the first letter of each GO term to upper case.
 rownames(interest_enrich_table) &lt;-

@@ -89,11 +89,18 @@ G_mat <- metadata[, 4:24]
 Finally, we load the mapping from gene name to ENSEMBL ID for all 6k genes used in GSFA, as well as selected T cell marker genes. This is specific to this study and analysis.
 
 ```{r}
+# Load gene ensembl IDs and matched gene symbols.
 feature.names <- data.frame(fread(paste0(wkdir, "GSE119450_RAW/D1N/genes.tsv"),
                                   header = FALSE), stringsAsFactors = FALSE)
 genes_df <- feature.names[match(rownames(lfsr_mat1), feature.names$V1), ]
 names(genes_df) <- c("ID", "Name")
+# Load marker genes in T cells.
 interest_df <- readRDS(paste0(wkdir, "processed_data/selected_tcell_markers.rds"))
+interest_df <- interest_df %>%
+  dplyr::filter(gene_name != "TOP2A")
+interest_df <- rbind(interest_df,
+                     c("TOPBP1", "Cell proliferation",
+                       "DNA topoisomerase II binding protein 1", "ENSG00000163781"))
 ```
 
 # Factor ~ Perturbation Associations
@@ -118,7 +125,7 @@ Here is a closer look at the estimated effects of selected perturbations on sele
 
 ```{r Fig_3A, fig.width=4.5, fig.height=4}
 targets <- c("ARID1A", "LCP2", "CD5", "CBLB", "RASA2", 
-             "DGKA", "TCEB2", "SOCS1", "CDKN1B")
+             "TCEB2", "SOCS1", "CDKN1B")
 complexplot_perturbation_factor(gibbs_PM$Gamma1_pm[-nrow(gibbs_PM$Gamma1_pm), ],
                                 gibbs_PM$beta1_pm[-nrow(gibbs_PM$beta1_pm), ],
                                 marker_names = KO_names, reorder_markers = targets,
@@ -356,12 +363,13 @@ We also performed several other differential expression methods for comparison, 
 
 ## Number of DEGs detected by different methods
 
-```{r lfsr}
+```{r}
 fdr_cutoff <- 0.05
 lfsr_cutoff <- 0.05
+guides <- KO_names[KO_names!="NonTarget"]
 ```
 
-```{r echo=FALSE}
+```{r print_lfsr, echo=FALSE}
 lfsr_signif_num <- colSums(lfsr_mat1 < lfsr_cutoff)
 signif_num_tb <- t(data.frame(KO = names(lfsr_signif_num),
                            Num_genes = lfsr_signif_num,
@@ -370,10 +378,6 @@ knitr::kable(rbind(signif_num_tb[, 1:7], signif_num_tb[, 8:14],
                    signif_num_tb[, 15:21]),
              caption = "Number of DEGs detected by GSFA:") %>%
   kable_styling() %>% scroll_box(width = '100%')
-```
-
-```{r}
-guides <- KO_names[KO_names!="NonTarget"]
 ```
 
 ```{r deseq}
@@ -446,6 +450,7 @@ dge_plt <- ggplot(dge_plot_df,
   geom_bar(position = "dodge", stat = "identity") +
   geom_text(aes(label = Num_DEGs),
             position = position_dodge(width = 0.9), vjust = -0.25) +
+  geom_hline(yintercept = 100, color = "grey50", linetype = "dotted") +
   scale_y_log10() +
   scale_fill_brewer(palette = "Set2") +
   labs(x = "Target gene",
@@ -472,9 +477,9 @@ To better understand the functions of these 9 target genes, we examined their ef
 Here are the summarized effects of perturbations on marker genes estimated by GSFA (Figure 4D).
 
 ```{r Fig_4D, fig.width=5.5, fig.height=4.5}
-interest_df <- rbind(interest_df, c("TOPBP1", "Cell proliferation", "", "ENSG00000163781"))
-targets <- c("ARID1A", "LCP2", "CD5", "CBLB", "RASA2",
-             "DGKZ", "TCEB2", "SOCS1", "CDKN1B")
+# Only keep target genes with > 100 DEGs to simplify plot.
+targets <- c("ARID1A", "LCP2", "BTLA", "CD5", "CBLB", "RASA2",
+             "TCEB2", "SOCS1", "CDKN1B", "DGKZ")
 complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = lfsr_mat1,
@@ -762,8 +767,8 @@ enrich_res <- readRDS(paste0(enrich_dir,
                              "GO_enrich_in_GSFA_DEGs_stimulated.rds"))
 gsfa_term_count <-
   sapply(enrich_res, function(x){ x %>% dplyr::filter(FDR < enrich_thres) %>% nrow()})
-# Skip low count target genes to simplify plot.
-gsfa_term_count <- gsfa_term_count[gsfa_term_count > 10]
+# Only keep target genes with > 100 DEGs to simplify plot.
+gsfa_term_count <- gsfa_term_count[targets]
 
 term_count_df <- data.frame(Perturbation = names(gsfa_term_count),
                             GSFA = as.numeric(gsfa_term_count))
@@ -793,8 +798,13 @@ num_terms_plt <-
        title = "Number of GO terms enriched in DEGs detected by different methods") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),
         legend.text = element_text(size = 13))
-num_terms_plt +
-  theme(legend.position = "none")
+num_terms_plt
+```
+
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_4B.pdf", height = 4, width = 8.5)
+num_terms_plt
+dev.off()
 ```
 
 # Session Information
