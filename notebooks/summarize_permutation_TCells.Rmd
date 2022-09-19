@@ -1,0 +1,433 @@
+---
+title: "Permutation Results on CD8+ T Cell CROP-seq Data"
+subtitle: "-- In-house scripts"
+author: "Yifan Zhou (zhouyf@uchicago.edu)"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+requireNamespace("pander", quietly = TRUE)
+library(data.table)
+library(Matrix)
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw() + theme(plot.title = element_text(size = 14, hjust = 0.5),
+                             axis.title = element_text(size = 14),
+                             axis.text = element_text(size = 12),
+                             legend.title = element_text(size = 13),
+                             legend.text = element_text(size = 12),
+                             panel.grid.minor = element_blank())
+)
+library(gridExtra)
+library(grid)
+library(kableExtra)
+
+# set default chunk output
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE,
+                      comment = NA,
+                      tidy = FALSE,
+                      fig.width = 8,
+                      fig.height = 6,
+                      fig.align = "center",
+                      results = "asis")
+
+# formatting of pander tables
+pander::panderOptions('knitr.auto.asis', FALSE)
+pander::panderOptions("table.split.table", Inf)
+```
+
+```{r}
+source("/project2/xinhe/yifan/Factor_analysis/reports/R/analytics_functions.R")
+wkdir <- "/project2/xinhe/yifan/Factor_analysis/Stimulated_T_Cells/"
+gsfa_folder <- "gsfa_output_detect_01/all_uncorrected_by_group.use_negctrl/permutation/"
+stopifnot(dir.exists(paste0(wkdir, gsfa_folder)))
+```
+
+```{r load meta data, fig.width=9}
+metadata <- readRDS(paste0(wkdir, "processed_data/metadata.all_T_cells_merged.rds"))
+all_KOs.G_mat <- metadata[, 4:24]
+KO_names <- colnames(all_KOs.G_mat)
+nmarkers <- ncol(all_KOs.G_mat)
+```
+
+**We separate the cells into 2 groups:**
+
+Stimulated: 14278 cells;  
+Unstimulated stage: 10677 cells.
+
+We modified GSFA so that the associations ($\beta$) between factors and perturbations are estimated for stimulated and unstimulated cells separately.
+
+Here, we summarize the permutation results for GSFA, scMAGeCK, DESeq2, and MAST.
+
+# GSFA Permutation
+
+Within both the stimulated and unstimulated cells, cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then GSFA was performed still using all conditions as guides. Factor-guide association as well as the LFSR of each gene were evaluated as usual.
+
+In total, 10 random permutation rounds like this were conducted.
+
+```{r load PM results}
+gibbs_list <- list()
+lfsr0_list <- list()
+lfsr1_list <- list()
+for (i in 1:10){
+  perm_res <- readRDS(paste0(wkdir, gsfa_folder,
+                            "All.gibbs_obj_k20.perm_", i, ".restart.light.rds"))
+  gibbs_list[[i]] <- perm_res$posterior_means
+  lfsr0_list[[i]] <- perm_res$lfsr0[, -ncol(perm_res$lfsr0)]
+  lfsr1_list[[i]] <- perm_res$lfsr1[, -ncol(perm_res$lfsr1)]
+}
+```
+
+## Factor ~ KO Association
+
+### Posterior Mean of Beta
+
+```{r fig.width=6, fig.height=4}
+beta0_pm_list <- list()
+for (i in 1:length(gibbs_list)){
+  perm_PM <- gibbs_list[[i]]
+  beta_pm_matrix <- t(perm_PM$beta0_pm[-(nmarkers + 1), ])
+  beta0_pm_list[[i]] <- as.numeric(beta_pm_matrix)
+}
+p0 <- ggplot(data.frame(beta = unlist(beta0_pm_list)),
+             aes(x = beta)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Beta estimation", y = "Count",
+       title = "GSFA (Unstimulated)",
+       subtitle = "10 Permutations, 21 Targets x 20 Factors") +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 14, hjust = 0.5))
+
+cat(paste("Unstimulated cells, # of |beta|\'s > 0.05:", sum(abs(unlist(beta0_pm_list)) > 0.05)))
+cat("\n\n")
+```
+
+```{r fig.width=6, fig.height=4}
+beta1_pm_list <- list()
+for (i in 1:length(gibbs_list)){
+  perm_PM <- gibbs_list[[i]]
+  beta_pm_matrix <- t(perm_PM$beta1_pm[-(nmarkers + 1), ])
+  beta1_pm_list[[i]] <- as.numeric(beta_pm_matrix)
+}
+p1 <- ggplot(data.frame(beta = unlist(beta1_pm_list)),
+             aes(x = beta)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Beta estimation", y = "Count",
+       title = "GSFA (Unstimulated)",
+       subtitle = "10 Permutations, 21 Targets x 20 Factors") +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 14, hjust = 0.5))
+cat(paste("Stimulated cells, # of |beta|\'s > 0.05:", sum(abs(unlist(beta1_pm_list)) > 0.05)))
+cat("\n\n")
+```
+
+```{r Fig_S4A, fig.width=9, fig.height=4}
+grid.arrange(p1, p0, nrow = 1)
+```
+
+### Beta PIP
+```{r fig.width=6, fig.height=4}
+beta0_pip_list <- list()
+for (i in 1:length(gibbs_list)){
+  perm_PM <- gibbs_list[[i]]
+  beta_pip_matrix <- t(perm_PM$Gamma0_pm[-(nmarkers + 1), ])
+  beta0_pip_list[[i]] <- as.numeric(beta_pip_matrix)
+}
+p0 <- ggplot(data.frame(pip = unlist(beta0_pip_list)),
+             aes(x = pip)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Beta PIP", y = "Count",
+       title = "GSFA (Unstimulated)",
+       subtitle = "10 Permutations, 21 Targets x 20 Factors") +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 14, hjust = 0.5))
+
+cat(paste("Unstimulated cells, # of PIPs > 0.8:", sum(unlist(beta0_pip_list) > 0.8)))
+cat("\n\n")
+```
+
+```{r fig.width=6, fig.height=4}
+beta1_pip_list <- list()
+for (i in 1:length(gibbs_list)){
+  perm_PM <- gibbs_list[[i]]
+  beta_pip_matrix <- t(perm_PM$Gamma1_pm[-(nmarkers + 1), ])
+  beta1_pip_list[[i]] <- as.numeric(beta_pip_matrix)
+}
+p1 <- ggplot(data.frame(pip = unlist(beta1_pip_list)),
+             aes(x = pip)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Beta PIP", y = "Count",
+       title = "GSFA (Stimulated)",
+       subtitle = "10 Permutations, 21 Targets x 20 Factors") +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 14, hjust = 0.5))
+
+cat(paste("Stimulated cells, # of PIPs > 0.8:", sum(unlist(beta1_pip_list) > 0.8)))
+cat("\n\n")
+```
+
+```{r Fig_S4B, fig.width=9, fig.height=4}
+grid.arrange(p1, p0, nrow = 1)
+```
+
+## LFSR
+
+```{r plot LFSR group0 results}
+lfsr0_df <- data.frame(lfsr = unlist(lfsr0_list),
+                       type = "Unstimulated")
+percent_str0 <- scales::percent(sum(lfsr0_df$lfsr < 0.05) /
+                                  nrow(lfsr0_df), accuracy = 0.1)
+grob0 <- grobTree(textGrob(paste(percent_str0, "data < 0.05"),
+                                 x = 0.1,  y = 0.1, hjust = 0,
+                           gp = gpar(col = "red", fontsize = 12)))
+p0 <- ggplot(lfsr0_df, aes(x = lfsr)) +
+  geom_histogram(bins = 30) +
+  labs(x = "LFSR", y = "Count",
+       title = "GSFA (Unstimulated)",
+       subtitle = "10 Permutations, 21 Targets x 6000 Genes") +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  annotation_custom(grob0)
+```
+
+```{r plot LFSR group1 results}
+lfsr1_df <- data.frame(lfsr = unlist(lfsr1_list),
+                       type = "Stimulated")
+percent_str1 <- scales::percent(sum(lfsr1_df$lfsr < 0.05) /
+                                  nrow(lfsr1_df), accuracy = 0.1)
+grob1 <- grobTree(textGrob(paste(percent_str1, "data < 0.05"),
+                           x = 0.1,  y = 0.1, hjust = 0,
+                           gp = gpar(col = "red", fontsize = 12)))
+p1 <- ggplot(lfsr1_df, aes(x = lfsr)) +
+  geom_histogram(bins = 30) +
+  labs(x = "LFSR", y = "Count",
+       title = "GSFA (Stimulated)",
+       subtitle = "10 Permutations, 21 Targets x 6000 Genes") +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5)) +
+  annotation_custom(grob1)
+```
+
+
+```{r Fig_S4C, fig.width=9, fig.height=4}
+grid.arrange(p1, p0, nrow = 1)
+```
+
+# scMAGeCK Permutation (Stimulated)
+
+Within stimulated cells, cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then scMAGeCK-LR test was performed for all guides at once.
+
+In total, 10 random permutation rounds like this were conducted.
+
+**The outputs are empirical p values**, some of them equal to 0 exactly, and had to be replaced with 0.0005 for QQ-plot.
+
+```{r load scmageck results}
+scmageck_list <- list()
+for (i in 1:10){
+  res <- readRDS(paste0(wkdir, "scmageck/scmageck_lr.TCells_stim.perm_", i, ".rds"))
+  res <- reshape2::melt(res$pval, variable.name = "target", value.name = "pvalue")
+  res$pvalue[res$pvalue==0] <- 0.0005 # minimum non-zero value is 0.001
+  scmageck_list[[i]] <- res
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(scmageck_list[[i]]$pvalue,
+               title_text = paste0("Stimulated Cells\n",
+                                   "Permutation ", i, ", 6000 genes x 21 Targets"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r Fig_S4D, fig.width=5, fig.height=5}
+qqunif.plot(do.call(rbind, scmageck_list)$pvalue,
+            main = paste0("scMAGeCK Permutations (Stimulated)"))
+```
+
+## Original scMAGeCK result
+
+```{r}
+scmageck_unpermuted <- readRDS(paste0(wkdir, "scmageck/scmageck_lr.TCells_stim.dev_res_top_6k.rds"))
+scmageck_res <- reshape2::melt(scmageck_unpermuted$pval, variable.name = "target", value.name = "pvalue")
+scmageck_res$pvalue[scmageck_res$pvalue==0] <- 0.0005
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(scmageck_res$pvalue,
+             title_text = paste0("scMAGeCK (Stimulated)\n",
+                                 "Original, 6000 genes x 21 Targets"))
+```
+
+# DESeq2 Permutation (Stimulated)
+
+Within stimulated cells, cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then DESeq2 test was performed under each guide.
+
+In total, 10 random permutation rounds like this were conducted.
+
+```{r load deseq2 results}
+deseq_list <- list()
+for (i in 1:10){
+  perm_lst <- list()
+  for (m in KO_names){
+    res <- readRDS(paste0(wkdir, "processed_data/DESeq2/all_by_stim_dev_6k/perm_",
+                            i, "/gRNA_", m, ".dev_res_top6k.rds"))
+    res <- as.data.frame(res@listData, row.names = res@rownames)
+    res$target <- m
+    perm_lst[[m]] <- res
+  }
+  deseq_list[[i]] <- do.call(rbind, perm_lst)
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(deseq_list[[i]]$pvalue,
+             title_text = paste0("Stimulated Cells\n",
+                                 "Permutation ", i, ", 6000 genes x 21 Targets"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r Fig_S4E, fig.width=5, fig.height=5}
+qqunif.plot(do.call(rbind, deseq_list)$pvalue,
+            main = paste0("DESeq2 Permutations (Stimulated)"))
+```
+
+## Original DESeq2 DGE result
+
+```{r}
+deseq_unpermuted <- list()
+for (m in KO_names){
+  fname <- paste0(wkdir, "processed_data/DESeq2/all_by_stim_dev_6k/gRNA_", m, ".dev_res_top6k.rds")
+  res <- readRDS(fname)
+  res <- as.data.frame(res@listData, row.names = res@rownames)
+  res$target <- m
+  deseq_unpermuted[[m]] <- res
+}
+deseq_unpermuted <- do.call(rbind, deseq_unpermuted)
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(deseq_unpermuted$pvalue,
+             title_text = paste0("DESeq2 (Stimulated)\n",
+                                 "Original, 6000 genes x 21 Targets"))
+```
+
+# MAST Permutation (Stimulated)
+
+Within stimulated cells, cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then MAST likelihood ratio test was performed under each guide.
+
+In total, 10 random permutation rounds like this were conducted.
+
+```{r load MAST results}
+mast_list <- list()
+for (i in 1:10){
+  perm_lst <- list()
+  for (m in KO_names){
+    res <- readRDS(paste0(wkdir, "processed_data/MAST/all_by_stim_dev_6k/perm_",
+                            i, "/gRNA_", m, ".dev_res_top6k.rds"))
+    res$target <- m
+    perm_lst[[m]] <- res
+  }
+  mast_list[[i]] <- do.call(rbind, perm_lst)
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(mast_list[[i]]$pval,
+             title_text = paste0("Stimulated Cells\n",
+                                 "Permutation ", i, ", 6000 genes x 21 Targets"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r Fig_S4F, fig.width=5, fig.height=5}
+qqunif.plot(do.call(rbind, mast_list)$pval,
+            main = paste0("MAST Permutations (Stimulated)"))
+```
+
+## Original MAST DGE result
+
+```{r}
+mast_unpermuted <- list()
+for (m in KO_names){
+  fname <- paste0(wkdir, "processed_data/MAST/all_by_stim_dev_6k/gRNA_", m, ".dev_res_top6k.rds")
+  res <- readRDS(fname)
+  res$target <- m
+  mast_unpermuted[[m]] <- res
+}
+mast_unpermuted <- do.call(rbind, mast_unpermuted)
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(mast_unpermuted$pval,
+             title_text = paste0("MAST (Stimulated)\n",
+                                 "Original, 6000 genes x 21 Targets"))
+```
+
+# edgeR Permutation (Stimulated)
+
+Within stimulated cells, cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then edgeR QLF test was performed under each guide.
+
+In total, 10 random permutation rounds like this were conducted.
+
+```{r load edgeR results}
+edger_list <- list()
+for (i in 1:10){
+  perm_lst <- list()
+  for (m in KO_names){
+    res <- readRDS(paste0(wkdir, "processed_data/edgeR_qlf/all_by_stim_dev_6k/perm_",
+                            i, "/gRNA_", m, ".dev_res_top6k.rds"))
+    res$target <- m
+    perm_lst[[m]] <- res
+  }
+  edger_list[[i]] <- do.call(rbind, perm_lst)
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(edger_list[[i]]$PValue,
+             title_text = paste0("Stimulated Cells\n",
+                                 "Permutation ", i, ", 6000 genes x 21 Targets"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r Fig_S4H, fig.width=5, fig.height=5}
+qqunif.plot(do.call(rbind, edger_list)$PValue,
+            main = paste0("edgeR-QLF Permutations (Stimulated)"))
+```
+
+## Original edgeR DGE result
+
+```{r}
+edger_unpermuted <- list()
+for (m in KO_names){
+  fname <- paste0(wkdir, "processed_data/edgeR_qlf/all_by_stim_dev_6k/gRNA_", m, ".dev_res_top6k.rds")
+  res <- readRDS(fname)
+  res$target <- m
+  edger_unpermuted[[m]] <- res
+}
+edger_unpermuted <- do.call(rbind, edger_unpermuted)
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(edger_unpermuted$PValue,
+             title_text = paste0("edgeR-QLF (Stimulated)\n",
+                                 "Original, 6000 genes x 21 Targets"))
+```
+

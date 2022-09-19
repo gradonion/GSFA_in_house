@@ -61,7 +61,7 @@ dotplot_beta_PIP <- function(beta_pip_matrix, beta_pm_matrix,
                              exclude_offset = TRUE,
                              inverse_factors = TRUE,
                              return_dataframe = FALSE,
-                             color_lgd_title = "Estimated effect size"){
+                             color_lgd_title = "Estimated\neffect size"){
   # Both 'beta_pip_matrix' and 'beta_pm_matrix' should be factor by guide/marker matrices,
   # Dots will be colored by effect size and sized by PIP value.
   if (exclude_offset){

@@ -417,7 +417,7 @@ Association</h1>
 number="2.1">
 <h2><span class="header-section-number">2.1</span> Perturbation effects
 on factors</h2>
-<p>Fisrt of all, we look at the estimated effects of gene perturbations
+<p>First of all, we look at the estimated effects of gene perturbations
 on factors inferred by GSFA.</p>
 <p>We found that targeting of 7 genes, ADNP, ARID1B, ASH1L, CHD2,
 DYRK1A, PTEN, and SETD5, has significant effects (PIP &gt; 0.95) on at
@@ -428,7 +428,7 @@ least 1 of the 20 inferred factors.</p>
                  reorder_markers = c(KO_names[KO_names!=&quot;Nontargeting&quot;], &quot;Nontargeting&quot;),
                  inverse_factors = F) +
   coord_flip()</code></pre>
-<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6A-1.png" width="864" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6A-1.png" width="816" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>## Similar visualization using GSFA built-in functions:
 GSFA::dotplot_beta_PIP(fit,
                        target_names = KO_names,

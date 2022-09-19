@@ -1,0 +1,357 @@
+---
+title: "Permutation Results on LUHMES CROP-seq Data"
+subtitle: "-- In-house scripts"
+author: "Yifan Zhou (zhouyf@uchicago.edu)"
+date: '`r format(Sys.time(), "%Y-%m-%d")`'
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+requireNamespace("pander", quietly = TRUE)
+library(data.table)
+library(Matrix)
+library(tidyverse)
+library(ggplot2)
+theme_set(theme_bw() + theme(plot.title = element_text(size = 14, hjust = 0.5),
+                             axis.title = element_text(size = 14),
+                             axis.text = element_text(size = 12),
+                             legend.title = element_text(size = 13),
+                             legend.text = element_text(size = 12),
+                             panel.grid.minor = element_blank())
+)
+library(gridExtra)
+library(grid)
+library(ComplexHeatmap)
+library(kableExtra)
+
+# set default chunk output
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE,
+                      comment = NA,
+                      tidy = FALSE,
+                      fig.width = 8,
+                      fig.height = 6,
+                      fig.align = "center",
+                      results = "asis")
+
+# formatting of pander tables
+pander::panderOptions('knitr.auto.asis', FALSE)
+pander::panderOptions("table.split.table", Inf)
+```
+
+```{r}
+source("/project2/xinhe/yifan/Factor_analysis/reports/R/analytics_functions.R")
+wkdir <- "/project2/xinhe/yifan/Factor_analysis/LUHMES/"
+gsfa_folder <- "gsfa_output_detect_01/use_negctrl/permutation/"
+stopifnot(dir.exists(paste0(wkdir, gsfa_folder)))
+```
+
+```{r load meta data, fig.width=9}
+metadata <- readRDS(paste0(wkdir, "processed_data/merged_metadata.rds"))
+G_mat <- metadata[, 4:18]
+KO_names <- colnames(G_mat)
+nmarkers <- ncol(G_mat)
+```
+
+Here, we summarize the permutation results for GSFA, scMAGeCK, DESeq2, and MAST.
+
+# GSFA Permutation
+
+Cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then GSFA was performed still using all conditions as guides. Factor-guide association as well as the LFSR of each gene were evaluated as usual.
+
+In total, 10 random permutation rounds like this were conducted. In each case, Gibbs sampling was conducted for 3000 iterations, and the posterior mean estimates were averaged over the last 1000 iterations. SVD Initialization.
+
+```{r load_pm_and_lfsr_all_permutations}
+gibbs_list <- list()
+lfsr_list <- list()
+for (i in 1:10){
+  perm_res <- readRDS(paste0(wkdir, gsfa_folder,
+                            "All.gibbs_obj_k20.perm_", i, ".light.rds"))
+  gibbs_list[[i]] <- perm_res$posterior_means
+  lfsr_list[[i]] <- perm_res$lfsr[, -ncol(perm_res$lfsr)]
+}
+```
+
+## Factor ~ KO Association
+
+### Posterior Mean of Beta
+
+```{r Fig_S7A, fig.width=4.5, fig.height=4}
+beta_pm_list <- list()
+for (i in 1:length(gibbs_list)){
+  perm_PM <- gibbs_list[[i]]
+  beta_pm_matrix <- t(perm_PM$beta_pm[-(nmarkers + 1), ])
+  beta_pm_list[[i]] <- as.numeric(beta_pm_matrix)
+}
+ggplot(data.frame(beta = unlist(beta_pm_list)),
+       aes(x = beta)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Beta estimation", y = "Count",
+       title = "LUHMES GSFA",
+       subtitle = "10 Permutations, 15 Targets x 20 Factors") +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 14, hjust = 0.5))
+cat(paste("# of |beta|\'s > 0.05:", sum(abs(unlist(beta_pm_list)) > 0.05)))
+cat("\n\n")
+```
+
+### Beta PIP
+```{r Fig_S7B, fig.width=4.5, fig.height=4}
+beta_pip_list <- list()
+for (i in 1:length(gibbs_list)){
+  perm_PM <- gibbs_list[[i]]
+  beta_pip_matrix <- t(perm_PM$Gamma_pm[-(nmarkers + 1), ])
+  beta_pip_list[[i]] <- as.numeric(beta_pip_matrix)
+}
+ggplot(data.frame(pip = unlist(beta_pip_list)),
+       aes(x = pip)) +
+  geom_histogram(bins = 30) +
+  labs(x = "Beta PIP", y = "Count",
+       title = "LUHMES GSFA",
+       subtitle = "10 Permutations, 15 Targets x 20 Factors") +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 14, hjust = 0.5))
+cat(paste("# of PIPs > 0.9:", sum(unlist(beta_pip_list) > 0.9)))
+cat("\n\n")
+```
+
+## LFSR
+
+```{r Fig_S7C, fig.width=4.5, fig.height=4}
+lfsr_df <- data.frame(lfsr = unlist(lfsr_list))
+percent_str <- scales::percent(sum(lfsr_df$lfsr < 0.05) /
+                                 nrow(lfsr_df), accuracy = 0.1)
+grob <- grobTree(textGrob(paste(percent_str, "data < 0.05"),
+                          x = 0.1,  y = 0.1, hjust = 0,
+                          gp = gpar(col = "red", fontsize = 12)))
+ggplot(lfsr_df, aes(x = lfsr)) +
+  geom_histogram(bins = 30) +
+  labs(x = "LFSR", y = "Count",
+       title = "LUHMES GSFA",
+       subtitle = "10 Permutations, 15 Targets x 6000 Genes") +
+  theme(plot.title = element_text(face = "bold"),
+        plot.subtitle = element_text(size = 14, hjust = 0.5)) +
+  annotation_custom(grob)
+```
+
+# scMAGeCK Permutation
+
+Cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then scMAGeCK-LR test was performed for all guides at once.
+
+In total, 10 random permutation rounds like this were conducted.
+
+**The outputs are empirical p values**, some of them equal to 0 exactly, and had to be replaced with 0.0005 for QQ-plot.
+
+```{r load scmageck results}
+scmageck_list <- list()
+for (i in 1:10){
+  res <- readRDS(paste0(wkdir, "scmageck/scmageck_lr.LUHMES.perm_", i, ".rds"))
+  res <- reshape2::melt(res$pval, variable.name = "target", value.name = "pvalue")
+  res$pvalue[res$pvalue==0] <- 0.0005 # minimum non-zero value is 0.001
+  scmageck_list[[i]] <- res
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(scmageck_list[[i]]$pvalue,
+               title_text = paste0("LUHMES\n",
+                                   "Permutation ", i, ", 15 Targets x 6000 genes"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r Fig_S7D, fig.width=5, fig.height=5}
+qqunif.plot(do.call(rbind, scmageck_list)$pvalue,
+            main = paste0("scMAGeCK Permutations"))
+```
+
+## Original scMAGeCK result
+
+```{r}
+scmageck_unpermuted <- readRDS(paste0(wkdir, "scmageck/scmageck_lr.LUHMES.dev_res_top_6k.rds"))
+scmageck_res <- reshape2::melt(scmageck_unpermuted$pval, variable.name = "target", value.name = "pvalue")
+scmageck_res$pvalue[scmageck_res$pvalue==0] <- 0.0005
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(scmageck_res$pvalue,
+             title_text = paste0("scMAGeCK\n",
+                                 "Original, 15 Targets x 6000 genes"))
+```
+
+# DESeq2 Permutation
+
+Cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then DESeq2 test was performed under each guide.
+
+In total, 10 random permutation rounds like this were conducted.
+
+```{r load deseq2 results}
+deseq_list <- list()
+for (i in 1:10){
+  perm_lst <- list()
+  for (m in KO_names){
+    res <- readRDS(paste0(wkdir, "processed_data/DESeq2/dev_top6k/perm_",
+                            i, "/gRNA_", m, ".dev_res_top6k.rds"))
+    res <- as.data.frame(res@listData, row.names = res@rownames)
+    res$target <- m
+    perm_lst[[m]] <- res
+  }
+  deseq_list[[i]] <- do.call(rbind, perm_lst)
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(deseq_list[[i]]$pvalue,
+             title_text = paste0("LUHMES\n",
+                                 "Permutation ", i, ", 15 Targets x 6000 genes"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r Fig_S7E, fig.width=5, fig.height=5}
+qqunif.plot(do.call(rbind, deseq_list)$pvalue,
+            main = paste0("DESeq2 Permutations"))
+```
+
+## Original DESeq2 DGE result
+
+```{r}
+deseq_unpermuted <- list()
+for (m in KO_names){
+  fname <- paste0(wkdir, "processed_data/DESeq2/dev_top6k/gRNA_", m, ".dev_res_top6k.rds")
+  res <- readRDS(fname)
+  res <- as.data.frame(res@listData, row.names = res@rownames)
+  res$target <- m
+  deseq_unpermuted[[m]] <- res
+}
+deseq_unpermuted <- do.call(rbind, deseq_unpermuted)
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(deseq_unpermuted$pvalue,
+             title_text = paste0("DESeq2\n",
+                                 "Original, 15 Targets x 6000 genes"))
+```
+
+# MAST Permutation
+
+Cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then MAST likelihood ratio test was performed under each guide.
+
+In total, 10 random permutation rounds like this were conducted.
+
+```{r load MAST results}
+mast_list <- list()
+for (i in 1:10){
+  perm_lst <- list()
+  for (m in KO_names){
+    res <- readRDS(paste0(wkdir, "processed_data/MAST/dev_top6k/perm_",
+                            i, "/gRNA_", m, ".dev_res_top6k.rds"))
+    res$target <- m
+    perm_lst[[m]] <- res
+  }
+  mast_list[[i]] <- do.call(rbind, perm_lst)
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(mast_list[[i]]$pval,
+             title_text = paste0("LUHMES MAST\n",
+                                 "Permutation ", i, ", 15 Targets x 6000 genes"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r Fig_S7F, fig.width=5, fig.height=5}
+qqunif.plot(do.call(rbind, mast_list)$pval,
+            main = paste0("MAST Permutations"))
+```
+
+## Original MAST DGE result
+
+```{r}
+mast_unpermuted <- list()
+for (m in KO_names){
+  fname <- paste0(wkdir, "processed_data/MAST/dev_top6k/gRNA_", m, ".dev_res_top6k.rds")
+  res <- readRDS(fname)
+  res$target <- m
+  mast_unpermuted[[m]] <- res
+}
+mast_unpermuted <- do.call(rbind, mast_unpermuted)
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(mast_unpermuted$pval,
+             title_text = paste0("MAST\n",
+                                 "Original, 15 Targets x 6000 genes"))
+```
+
+# SCEPTRE
+
+
+
+# edgeR Permutation
+
+Cell labels in the expression data were permuted randomly so that they are no longer correlated with the knock-down conditions. Then edgeR QLF test was performed under each guide.
+
+In total, 10 random permutation rounds like this were conducted.
+
+```{r load edgeR results, eval=F, include=F}
+edger_list <- list()
+for (i in 1:10){
+  perm_lst <- list()
+  for (m in KO_names){
+    res <- readRDS(paste0(wkdir, "processed_data/edgeR_qlf/dev_top6k/perm_",
+                            i, "/gRNA_", m, ".dev_res_top6k.rds"))
+    res$target <- m
+    perm_lst[[m]] <- res
+  }
+  edger_list[[i]] <- do.call(rbind, perm_lst)
+}
+```
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+for (i in 1:10){
+  summ_pvalues(edger_list[[i]]$PValue,
+             title_text = paste0("LUHMES edgeR\n",
+                                 "Permutation ", i, ", 15 Targets x 6000 genes"))
+}
+```
+
+## Combined from 10 permutations
+
+```{r fig.width=10, fig.height=5, eval=F, include=F}
+summ_pvalues(do.call(rbind, edger_list)$PValue,
+             title_text = paste0("LUHMES edgeR\n",
+                                 "10 Permutations, 15 Targets x 6000 genes"))
+```
+
+## Original edgeR DGE result
+
+```{r}
+edger_unpermuted <- list()
+for (m in KO_names){
+  fname <- paste0(wkdir, "processed_data/edgeR_qlf/dev_top6k/gRNA_", m, ".dev_res_top6k.rds")
+  res <- readRDS(fname)
+  res$target <- m
+  edger_unpermuted[[m]] <- res
+}
+edger_unpermuted <- do.call(rbind, edger_unpermuted)
+```
+
+```{r fig.width=10, fig.height=5}
+summ_pvalues(edger_unpermuted$PValue,
+             title_text = paste0("edgeR\n",
+                                 "Original, 15 Targets x 6000 genes"))
+```
+

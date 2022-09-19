@@ -113,7 +113,7 @@ We found that targeting of 9 genes, ARID1A, CBLB, CD5, CDKN1B, DGKA, LCP2, RASA2
 
 Estimated effects of perturbations on factors (Figure S4A):
 
-```{r Fig_S4A, fig.width=9, fig.height=6.5}
+```{r Fig_S4A, fig.width=8.5, fig.height=6.5}
 dotplot_beta_PIP(t(gibbs_PM$Gamma1_pm), t(gibbs_PM$beta1_pm),
                  marker_names = KO_names,
                  reorder_markers = c(KO_names[KO_names!="NonTarget"], "NonTarget"),
@@ -154,7 +154,7 @@ summ_pvalues(unlist(heatmap_matrix),
 
 In unstimulated cells, only three pairs of associations were detected at PIP > 0.95, which is unsurprising given the role of these targeted genes in regulating T cell responses (Figure S4B):
 
-```{r Fig_S4B, fig.width=9, fig.height=6.5}
+```{r Fig_S4B, fig.width=8.5, fig.height=6.5}
 dotplot_beta_PIP(t(gibbs_PM$Gamma0_pm), t(gibbs_PM$beta0_pm),
                  marker_names = KO_names,
                  reorder_markers = c(KO_names[KO_names!="NonTarget"], "NonTarget"),
@@ -733,6 +733,12 @@ map <- Heatmap(interest_enrich_table[, targets],
                column_names_rot = 45,
                width = unit(7, "cm"))
 draw(map, heatmap_legend_side = "right")
+```
+
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_4C.pdf", width = 9, height = 5.5)
+draw(map, heatmap_legend_side = "right")
+dev.off()
 ```
 
 This next plot expanded the gRNA targets to all that have DEGs detected:
