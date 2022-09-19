@@ -713,8 +713,10 @@ ENSG00000196591
 </div>
 <p>We visualize both the gene PIPs (dot size) and gene weights (dot
 color) in all factors (Figure S6B):</p>
-<pre class="r"><code>complexplot_gene_factor(genes_df, interest_df, gibbs_PM$F_pm, gibbs_PM$W_pm)</code></pre>
+<pre class="r"><code>plt &lt;- complexplot_gene_factor(genes_df, interest_df, gibbs_PM$F_pm, gibbs_PM$W_pm)</code></pre>
 <p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6B-1.png" width="960" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>plt</code></pre>
+<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6B-2.png" width="960" style="display: block; margin: auto;" /></p>
 <p>A closer look at some factors that are associated with perturbations
 (Figure 5C):</p>
 <pre class="r"><code>complexplot_gene_factor(genes_df, interest_df, gibbs_PM$F_pm, gibbs_PM$W_pm,
@@ -1049,14 +1051,14 @@ for (m in targets){
   fdr_mat[, m] &lt;- deseq_list[[m]]$FDR[match(interest_df$gene_ID, deseq_list[[m]]$geneID)]
 }</code></pre>
 <p>Here are DESeq2 estimated effects of perturbations on marker genes
-(Figure S6C):</p>
-<pre class="r"><code>complexplot_gene_perturbation(genes_df, interest_df,
+(Figure S6D):</p>
+<pre class="r"><code>plt &lt;- complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = &quot;FDR&quot;,
                               effect_mat = FC_mat, effect_name = &quot;DESeq2 log2FC&quot;,
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c(&quot;blue3&quot;, &quot;grey90&quot;, &quot;red3&quot;))</code></pre>
-<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6C-1.png" width="624" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6D-1.png" width="624" style="display: block; margin: auto;" /></p>
 </div>
 <div id="mast" class="section level3" number="4.2.4">
 <h3><span class="header-section-number">4.2.4</span> MAST</h3>
@@ -1069,14 +1071,14 @@ for (m in targets){
   fdr_mat[, m] &lt;- mast_list[[m]]$FDR[match(interest_df$gene_ID, mast_list[[m]]$geneID)]
 }</code></pre>
 <p>MAST estimated effects of perturbations on marker genes (Figure
-S6D):</p>
-<pre class="r"><code>complexplot_gene_perturbation(genes_df, interest_df,
+S6E):</p>
+<pre class="r"><code>plt &lt;- complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = &quot;FDR&quot;,
                               effect_mat = FC_mat, effect_name = &quot;MAST logFC&quot;,
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c(&quot;blue3&quot;, &quot;grey90&quot;, &quot;red3&quot;))</code></pre>
-<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6D-1.png" width="624" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6E-1.png" width="624" style="display: block; margin: auto;" /></p>
 </div>
 <div id="sceptre" class="section level3" number="4.2.5">
 <h3><span class="header-section-number">4.2.5</span> SCEPTRE</h3>
@@ -1094,14 +1096,14 @@ for (m in targets){
                                             sceptre_tmp_res$gene_id)]
 }</code></pre>
 <p>SCEPTRE estimated effects of perturbations on marker genes (Figure
-S6E):</p>
-<pre class="r"><code>complexplot_gene_perturbation(genes_df, interest_df,
+S6F):</p>
+<pre class="r"><code>plt &lt;- complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = &quot;FDR&quot;,
                               effect_mat = FC_mat, effect_name = &quot;SCEPTRE logFC&quot;,
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c(&quot;blue3&quot;, &quot;grey90&quot;, &quot;red3&quot;))</code></pre>
-<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6E-1.png" width="624" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6F-1.png" width="624" style="display: block; margin: auto;" /></p>
 </div>
 </div>
 <div id="go-enrichment-in-degs" class="section level2" number="4.3">
@@ -1181,7 +1183,7 @@ map &lt;- Heatmap(abs(interest_enrich_table),
                column_names_side = &quot;top&quot;,
                width = unit(6, &quot;cm&quot;))
 draw(map, heatmap_legend_side = &quot;bottom&quot;)</code></pre>
-<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6F-1.png" width="768" style="display: block; margin: auto;" /></p>
+<p><img src="interpret_gsfa_LUHMES_files/figure-html/Fig_S6C-1.png" width="768" style="display: block; margin: auto;" /></p>
 <p>Similar GO enrichment analyses were performed on DEGs detected by
 alternative methods (FDR &lt; 0.05).<br />
 Below summarizes the number of significant GO terms in DEGs by each

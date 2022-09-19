@@ -181,7 +181,14 @@ knitr::kable(interest_df) %>%
 We visualize both the gene PIPs (dot size) and gene weights (dot color) in all factors (Figure S6B):
 
 ```{r Fig_S6B, fig.width=10, fig.height=5}
-complexplot_gene_factor(genes_df, interest_df, gibbs_PM$F_pm, gibbs_PM$W_pm)
+plt <- complexplot_gene_factor(genes_df, interest_df, gibbs_PM$F_pm, gibbs_PM$W_pm)
+plt
+```
+
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_S6B.pdf", height = 5, width = 10)
+plt
+dev.off()
 ```
 
 A closer look at some factors that are associated with perturbations (Figure 5C):
@@ -432,15 +439,20 @@ for (m in targets){
 }
 ```
 
-Here are DESeq2 estimated effects of perturbations on marker genes (Figure S6C):
+Here are DESeq2 estimated effects of perturbations on marker genes (Figure S6D):
 
-```{r Fig_S6C, fig.width=6.5, fig.height=5}
-complexplot_gene_perturbation(genes_df, interest_df,
+```{r Fig_S6D, fig.width=6.5, fig.height=5}
+plt <- complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = "FDR",
                               effect_mat = FC_mat, effect_name = "DESeq2 log2FC",
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c("blue3", "grey90", "red3"))
+```
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_S6D.pdf", height = 5, width = 6.5)
+plt
+dev.off()
 ```
 
 ### MAST
@@ -456,15 +468,21 @@ for (m in targets){
 }
 ```
 
-MAST estimated effects of perturbations on marker genes (Figure S6D):
+MAST estimated effects of perturbations on marker genes (Figure S6E):
 
-```{r Fig_S6D, fig.width=6.5, fig.height=5}
-complexplot_gene_perturbation(genes_df, interest_df,
+```{r Fig_S6E, fig.width=6.5, fig.height=5}
+plt <- complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = "FDR",
                               effect_mat = FC_mat, effect_name = "MAST logFC",
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c("blue3", "grey90", "red3"))
+```
+
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_S6E.pdf", height = 5, width = 6.5)
+plt
+dev.off()
 ```
 
 ### SCEPTRE
@@ -485,17 +503,21 @@ for (m in targets){
 }
 ```
 
-SCEPTRE estimated effects of perturbations on marker genes (Figure S6E):
+SCEPTRE estimated effects of perturbations on marker genes (Figure S6F):
 
-```{r Fig_S6E, fig.width=6.5, fig.height=5}
-complexplot_gene_perturbation(genes_df, interest_df,
+```{r Fig_S6F, fig.width=6.5, fig.height=5}
+plt <- complexplot_gene_perturbation(genes_df, interest_df,
                               targets = targets,
                               lfsr_mat = fdr_mat, lfsr_name = "FDR",
                               effect_mat = FC_mat, effect_name = "SCEPTRE logFC",
                               score_break = c(-0.4, 0, 0.4),
                               color_break = c("blue3", "grey90", "red3"))
 ```
-
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_S6F.pdf", height = 5, width = 6.5)
+plt
+dev.off()
+```
 
 ## GO enrichment in DEGs
 
@@ -599,7 +621,7 @@ terms_of_interest_df <- left_join(terms_of_interest_df, signif_term_df,
 Here are selected GO "biological process" terms and their folds of enrichment in DEGs detected by GSFA (Figure S6F):  
 (In the code below, we omitted the content in `terms_of_interest_df` as one can subset the `enrich_table` with any terms of their choice.)
 
-```{r Fig_S6F, fig.height=5.5, fig.width=8}
+```{r Fig_S6C, fig.height=5.5, fig.width=8}
 interest_enrich_table <- enrich_table[terms_of_interest_df$description, ]
 interest_enrich_table[is.na(interest_enrich_table)] <- 0
 # Convert only the first letter of each GO term to upper case.
@@ -619,6 +641,12 @@ map <- Heatmap(abs(interest_enrich_table),
                column_names_side = "top",
                width = unit(6, "cm"))
 draw(map, heatmap_legend_side = "bottom")
+```
+
+```{r eval=FALSE, include=FALSE}
+pdf("figs/Fig_S6C.pdf", height = 5.5, width = 8)
+draw(map, heatmap_legend_side = "bottom")
+dev.off()
 ```
 
 Similar GO enrichment analyses were performed on DEGs detected by alternative methods (FDR < 0.05).  

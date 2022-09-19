@@ -99,7 +99,7 @@ for (i in 1:length(gibbs_list)){
 p0 <- ggplot(data.frame(beta = unlist(beta0_pm_list)),
              aes(x = beta)) +
   geom_histogram(bins = 30) +
-  labs(x = "Beta estimation", y = "Count",
+  labs(x = "Estimated association effect size", y = "Count",
        title = "GSFA (Unstimulated)",
        subtitle = "10 Permutations, 21 Targets x 20 Factors") +
   theme(plot.title = element_text(face = "bold"),
@@ -119,8 +119,8 @@ for (i in 1:length(gibbs_list)){
 p1 <- ggplot(data.frame(beta = unlist(beta1_pm_list)),
              aes(x = beta)) +
   geom_histogram(bins = 30) +
-  labs(x = "Beta estimation", y = "Count",
-       title = "GSFA (Unstimulated)",
+  labs(x = "Estimated association effect size", y = "Count",
+       title = "GSFA (Stimulated)",
        subtitle = "10 Permutations, 21 Targets x 20 Factors") +
   theme(plot.title = element_text(face = "bold"),
         plot.subtitle = element_text(size = 14, hjust = 0.5))
@@ -143,7 +143,7 @@ for (i in 1:length(gibbs_list)){
 p0 <- ggplot(data.frame(pip = unlist(beta0_pip_list)),
              aes(x = pip)) +
   geom_histogram(bins = 30) +
-  labs(x = "Beta PIP", y = "Count",
+  labs(x = "Estimated PIP of association", y = "Count",
        title = "GSFA (Unstimulated)",
        subtitle = "10 Permutations, 21 Targets x 20 Factors") +
   theme(plot.title = element_text(face = "bold"),
@@ -163,7 +163,7 @@ for (i in 1:length(gibbs_list)){
 p1 <- ggplot(data.frame(pip = unlist(beta1_pip_list)),
              aes(x = pip)) +
   geom_histogram(bins = 30) +
-  labs(x = "Beta PIP", y = "Count",
+  labs(x = "Estimated PIP of association", y = "Count",
        title = "GSFA (Stimulated)",
        subtitle = "10 Permutations, 21 Targets x 20 Factors") +
   theme(plot.title = element_text(face = "bold"),
